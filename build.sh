@@ -61,10 +61,10 @@ if [ -f Resources/menu-icon.png ]; then
   cp Resources/menu-icon.png "$APP/Contents/Resources/"
 fi
 
-# 同梱するキャラの絵。初回起動で Application Support へ書き出される
-if [ -d Resources/Faces ]; then
-  mkdir -p "$APP/Contents/Resources/Faces"
-  cp Resources/Faces/*.png "$APP/Contents/Resources/Faces/"
+# 同梱するキャラクター。初回起動で Application Support へ書き出される
+if [ -d Resources/Characters ]; then
+  mkdir -p "$APP/Contents/Resources/Characters"
+  cp Resources/Characters/*.png "$APP/Contents/Resources/Characters/"
 fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST

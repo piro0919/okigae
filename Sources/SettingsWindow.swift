@@ -2,8 +2,8 @@ import AppKit
 
 /// 項目の一覧と、それぞれに当てる絵を選ぶ窓。
 ///
-/// 上段はメニューバーと同じ横一列。下段は絵の一覧を格子で並べる。
-/// 項目を選んでから絵を押す、という順で割り当てる。
+/// 上段はメニューバーと同じ横一列。下段はキャラクターの一覧を格子で並べる。
+/// 項目を選んでからキャラクターを押す、という順で割り当てる。
 /// 縦積みの一覧に較べて、上段がそのまま仕上がりの下見になる。
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let itemStrip = NSStackView()
@@ -50,7 +50,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         facesGrid.spacing = 4
         facesGrid.alignment = .leading
 
-        let sizeLabel = NSTextField(labelWithString: "絵の大きさ")
+        let sizeLabel = NSTextField(labelWithString: "大きさ")
         let size = NSPopUpButton()
         for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
             size.addItem(withTitle: String(format: "%.0f%%", value * 100))
@@ -61,7 +61,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         size.target = self
         size.action = #selector(pickSize(_:))
 
-        let openFolder = NSButton(title: "絵のフォルダを開く", target: self, action: #selector(openFacesFolder))
+        let openFolder = NSButton(title: "フォルダを開く", target: self, action: #selector(openFacesFolder))
         let refresh = NSButton(title: "更新", target: self, action: #selector(reload))
 
         let footer = NSStackView(views: [sizeLabel, size, openFolder, refresh])
@@ -70,7 +70,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
         let root = NSStackView(views: [
             sectionLabel("メニューバーの項目"), itemStrip, hint,
-            sectionLabel("絵"), facesGrid, footer,
+            sectionLabel("キャラクター"), facesGrid, footer,
         ])
         root.orientation = .vertical
         root.alignment = .leading
@@ -167,11 +167,12 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         none.onClick = { [weak self] in self?.assign(nil) }
         cells.append(none)
 
-        for face in Assignments.availableFaces() {
-            let image = NSImage(contentsOf: Assignments.facesDirectory.appendingPathComponent("\(face).png"))
-            let cell = Cell(image: image, side: cellSide, selected: current == face, dimmed: false)
-            cell.toolTip = face
-            cell.onClick = { [weak self] in self?.assign(face) }
+        for character in Assignments.availableCharacters() {
+            let image = NSImage(contentsOf: Assignments.charactersDirectory
+                .appendingPathComponent("\(character).png"))
+            let cell = Cell(image: image, side: cellSide, selected: current == character, dimmed: false)
+            cell.toolTip = character
+            cell.onClick = { [weak self] in self?.assign(character) }
             cells.append(cell)
         }
 
@@ -185,12 +186,12 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             hint.stringValue = "項目が見つかりません。画面収録の許可を確認してください。"
             return
         }
-        hint.stringValue = "\(displayName(for: key)) に当てる絵を選んでください"
+        hint.stringValue = "\(displayName(for: key)) に当てるキャラクターを選んでください"
     }
 
-    private func assign(_ face: String?) {
+    private func assign(_ character: String?) {
         guard let key = selectedKey else { return }
-        Assignments.set(face: face, for: key)
+        Assignments.set(character: character, for: key)
         onChange?()
         rebuildStrip()
         rebuildFaces()
@@ -292,7 +293,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     @objc private func openFacesFolder() {
         Assignments.prepareDirectories()
-        NSWorkspace.shared.open(Assignments.facesDirectory)
+        NSWorkspace.shared.open(Assignments.charactersDirectory)
     }
 
     /// 常駐アプリは `.accessory` で動いていて、そのままでは窓が前面を取れない。
@@ -316,7 +317,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
 // MARK: - 升目ひとつ
 
-/// 項目や絵を一つ表すます。選択中は枠が付く。
+/// 項目やキャラクターを一つ表すます。選択中は枠が付く。
 private final class Cell: NSView {
     var onClick: (() -> Void)?
     var label: String? { didSet { needsDisplay = true } }
@@ -359,7 +360,7 @@ private final class Cell: NSView {
                                   width: size.width, height: size.height),
                        from: .zero, operation: .sourceOver, fraction: dimmed ? 0.45 : 1)
         } else if let label {
-            // 絵が無いと他の升目と釣り合わないので、斜線を敷く
+            // 何も無いと他の升目と釣り合わないので、斜線を敷く
             let slash = NSBezierPath()
             slash.move(to: NSPoint(x: bounds.minX + 10, y: bounds.minY + 10))
             slash.line(to: NSPoint(x: bounds.maxX - 10, y: bounds.maxY - 10))

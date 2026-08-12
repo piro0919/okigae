@@ -94,12 +94,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
     }
 
-    @objc private func assign(_ sender: NSMenuItem) {
-        guard let key = sender.representedObject as? String else { return }
-        let face = sender.title == "なし" ? nil : sender.title
-        Assignments.set(face: face, for: key)
-        rebuildAll()
-    }
 
 
     @objc private func openSettings() {
