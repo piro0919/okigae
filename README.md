@@ -11,6 +11,13 @@ Only the apps you assign artwork to change; everything else stays as it was.
 Requires macOS 14 or later. Xcode is not needed — the Swift that ships with the
 Command Line Tools is enough.
 
+## Install
+
+Grab the DMG from [Releases](https://github.com/piro0919/okigae/releases) and drag Okigae
+into Applications. The app is signed ad-hoc rather than notarised, so the first launch needs
+a right-click and **Open**. Updates after that arrive through Sparkle — Okigae looks once at
+launch and only says something when there is an update.
+
 ## How it works
 
 - The overlay is a transparent panel at `.statusBar` level that ignores mouse events,
@@ -71,6 +78,16 @@ Generated PNGs carry transparent margins, so square them before dropping them in
 ```bash
 swift Tools/square.swift <generated.png> ~/Library/Application\ Support/Okigae/Faces/<name>.png
 ```
+
+## Releasing
+
+```bash
+./release.sh 0.1.0
+```
+
+Builds the app ad-hoc signed, packs a DMG and an update zip, signs the appcast with the key
+in the login keychain, and pushes all three to GitHub Releases. Losing that private key means
+losing the ability to update copies already out there.
 
 ## Known limits
 
