@@ -26,8 +26,18 @@ enum Backdrop {
     ///   - region: CoreGraphics 座標の矩形。
     ///   - windowID: この項目より下にあるものだけを撮る。
     static func capture(region: CGRect, below windowID: CGWindowID) -> CGImage? {
+        capture(region: region, windowID: windowID,
+                listOption: CGWindowListOption.optionOnScreenBelowWindow.rawValue)
+    }
+
+    /// その項目そのものを撮る。設定画面で、本来のアイコンを見せるために使う。
+    static func capture(region: CGRect, of windowID: CGWindowID) -> CGImage? {
+        capture(region: region, windowID: windowID,
+                listOption: CGWindowListOption.optionIncludingWindow.rawValue)
+    }
+
+    private static func capture(region: CGRect, windowID: CGWindowID, listOption: UInt32) -> CGImage? {
         guard let createImage else { return nil }
-        let listOption = CGWindowListOption.optionOnScreenBelowWindow.rawValue
         let imageOption = CGWindowImageOption([.bestResolution, .boundsIgnoreFraming]).rawValue
         return createImage(region, listOption, windowID, imageOption)?.takeRetainedValue()
     }

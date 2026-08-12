@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var timer: Timer?
     private var didRequestPermission = false
+    private var settingsWindow: SettingsWindow?
 
     /// 絵の大きさ。枠に収まる大きさを 1.0 とした倍率。
     fileprivate var faceScale: CGFloat {
@@ -100,6 +101,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let value = sender.representedObject as? Double else { return }
         UserDefaults.standard.set(value, forKey: "faceScale")
         rebuildAll()
+    }
+
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            settingsWindow = SettingsWindow { [weak self] in self?.rebuildAll() }
+        }
+        settingsWindow?.show()
     }
 
     @objc private func openFacesFolder() {
@@ -193,6 +201,7 @@ extension AppDelegate: NSMenuDelegate {
             menu.addItem(withTitle: "画面収録を許可する（設定を開く）",
                          action: #selector(openPrivacySettings), keyEquivalent: "")
         }
+        menu.addItem(withTitle: "設定…", action: #selector(openSettings), keyEquivalent: ",")
         let sizeEntry = NSMenuItem(title: "絵の大きさ", action: nil, keyEquivalent: "")
         let sizeMenu = NSMenu()
         for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
