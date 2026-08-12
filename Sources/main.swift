@@ -86,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             image.size = NSSize(width: 18, height: 18)
             item.button?.image = image
         } else {
+            // 絵が見つからないときの保険。通常は起きない
             item.button?.title = "Okigae"
         }
         item.menu = NSMenu()
@@ -127,11 +128,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func sync() {
-        guard hasPermission() else {
-            statusItem?.button?.title = "M?"
-            return
-        }
-        statusItem?.button?.title = "M"
+        // 権限が無いときは何も置かない。メニューに「画面収録を許可…」が出る
+        guard hasPermission() else { return }
         let items = StatusItems.resolved().filter { !$0.key.isEmpty }
         var alive = Set<String>()
 
