@@ -39,6 +39,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Assignments.load()
         installStatusItem()
 
+        // 更新の確認は起動時に1回だけ。見つかったときだけ画面が出る
+        Updater.shared.checkQuietly()
+
         sync()
         timer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.sync()
@@ -108,6 +111,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindow = SettingsWindow { [weak self] in self?.rebuildAll() }
         }
         settingsWindow?.show()
+    }
+
+    @objc private func checkForUpdates() {
+        Updater.shared.checkNow()
     }
 
     @objc private func openFacesFolder() {
@@ -202,6 +209,7 @@ extension AppDelegate: NSMenuDelegate {
                          action: #selector(openPrivacySettings), keyEquivalent: "")
         }
         menu.addItem(withTitle: "設定…", action: #selector(openSettings), keyEquivalent: ",")
+        menu.addItem(withTitle: "更新を確認…", action: #selector(checkForUpdates), keyEquivalent: "")
         let sizeEntry = NSMenuItem(title: "絵の大きさ", action: nil, keyEquivalent: "")
         let sizeMenu = NSMenu()
         for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
