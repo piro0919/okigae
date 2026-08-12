@@ -8,7 +8,10 @@ import AppKit
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let itemStrip = NSStackView()
     private let charactersGrid = NSStackView()
-    private let hint = NSTextField(labelWithString: "")
+    /// 上段の下。選んでいる項目の名前と案内
+    private let itemHint = NSTextField(labelWithString: "")
+    /// 下段の下。今の割り当てと、ホバー中のキャラクター名
+    private let characterHint = NSTextField(labelWithString: "")
 
     private var onChange: (() -> Void)?
     private var items: [StatusItem] = []
@@ -43,8 +46,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         itemStrip.spacing = 4
         itemStrip.alignment = .leading
 
-        hint.textColor = .secondaryLabelColor
-        hint.font = .systemFont(ofSize: 11)
+        for label in [itemHint, characterHint] {
+            label.textColor = .secondaryLabelColor
+            label.font = .systemFont(ofSize: 11)
+        }
 
         charactersGrid.orientation = .vertical
         charactersGrid.spacing = 4
@@ -69,14 +74,14 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         footer.spacing = 8
 
         let root = NSStackView(views: [
-            sectionLabel("メニューバーの項目"), itemStrip, hint,
-            sectionLabel("キャラクター"), charactersGrid, footer,
+            sectionLabel("メニューバーの項目"), itemStrip, itemHint,
+            sectionLabel("キャラクター"), charactersGrid, characterHint, footer,
         ])
         root.orientation = .vertical
         root.alignment = .leading
         root.spacing = 10
         root.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-        root.setCustomSpacing(16, after: hint)
+        root.setCustomSpacing(16, after: itemHint)
 
         window.contentView = root
         reload()
@@ -115,8 +120,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             .sorted { $0.frame.minX < $1.frame.minX }
             .filter { seen.insert($0.key).inserted }
 
-        if selectedKey == nil || !items.contains(where: { $0.key == selectedKey }) {
-            selectedKey = items.first?.key
+        // 既定では選ばない。勝手に 1 個目を選ぶと、その項目の案内が出てしまう。
+        if let key = selectedKey, !items.contains(where: { $0.key == key }) {
+            selectedKey = nil
         }
         rebuildStrip()
         rebuildCharacters()
@@ -136,7 +142,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             let name = displayName(for: item.key)
             cell.toolTip = name
             cell.onHover = { [weak self] inside in
-                self?.showHover(inside ? name : nil)
+                self?.itemHint.stringValue = inside ? name : self?.itemHintText() ?? ""
             }
             cell.onClick = { [weak self] in
                 self?.selectedKey = item.key
@@ -164,13 +170,17 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private func rebuildCharacters() {
         charactersGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
         let current = selectedKey.flatMap { Assignments.table[$0] }
+        // 項目を選ぶまでは当てる先が無い。薄くして、押しても何も起きないようにする。
+        charactersGrid.alphaValue = selectedKey == nil ? 0.35 : 1
 
+        // 項目を選ぶまでは、どの升目にも枠を付けない
+        let hasTarget = selectedKey != nil
         var cells: [NSView] = []
-        let none = Cell(image: nil, side: cellSide, selected: current == nil, dimmed: false)
+        let none = Cell(image: nil, side: cellSide, selected: hasTarget && current == nil, dimmed: false)
         none.label = "なし"
         none.toolTip = "なし"
         none.onHover = { [weak self] inside in
-            self?.showHover(inside ? "なし" : nil)
+            self?.characterHint.stringValue = inside ? "なし" : self?.characterHintText() ?? ""
         }
         none.onClick = { [weak self] in self?.assign(nil) }
         cells.append(none)
@@ -178,10 +188,11 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         for character in Assignments.availableCharacters() {
             let image = NSImage(contentsOf: Assignments.charactersDirectory
                 .appendingPathComponent("\(character).png"))
-            let cell = Cell(image: image, side: cellSide, selected: current == character, dimmed: false)
+            let cell = Cell(image: image, side: cellSide,
+                            selected: hasTarget && current == character, dimmed: false)
             cell.toolTip = character
             cell.onHover = { [weak self] inside in
-                self?.showHover(inside ? character : nil)
+                self?.characterHint.stringValue = inside ? character : self?.characterHintText() ?? ""
             }
             cell.onClick = { [weak self] in self?.assign(character) }
             cells.append(cell)
@@ -192,29 +203,34 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         }
     }
 
-    /// ホバー中はその名前を出し、外れたら元の案内へ戻す。
-    private func showHover(_ name: String?) {
-        if let name {
-            hint.stringValue = name
-        } else {
-            updateHint()
+    private func itemHintText() -> String {
+        if items.isEmpty {
+            return "項目が見つかりません。画面収録の許可を確認してください。"
         }
+        guard let key = selectedKey else {
+            return "キャラクターを当てる項目を選んでください"
+        }
+        return "\(displayName(for: key)) に当てるキャラクターを選んでください"
+    }
+
+    private func characterHintText() -> String {
+        guard let key = selectedKey else { return " " }
+        return Assignments.table[key].map { "いまは \($0)" } ?? "いまは なし"
     }
 
     private func updateHint() {
-        guard let key = selectedKey else {
-            hint.stringValue = "項目が見つかりません。画面収録の許可を確認してください。"
-            return
-        }
-        hint.stringValue = "\(displayName(for: key)) に当てるキャラクターを選んでください"
+        itemHint.stringValue = itemHintText()
+        characterHint.stringValue = characterHintText()
     }
 
     private func assign(_ character: String?) {
+        // 当てる先が無いうちは何もしない。見た目でも薄くしてある。
         guard let key = selectedKey else { return }
         Assignments.set(character: character, for: key)
         onChange?()
         rebuildStrip()
         rebuildCharacters()
+        updateHint()
     }
 
     // MARK: - 名前と絵
