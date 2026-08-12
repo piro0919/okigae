@@ -26,8 +26,25 @@ enum Assignments {
         }
     }
 
+    /// 同梱の絵を Faces へ書き出す。同じ名前が既にあれば触らない。
+    ///
+    /// 配布した相手の環境には何も無いので、初回は選べる絵が一つも無い状態から始まる。
+    /// アプリの中に 8 体持たせて、初回起動で置く。
+    static func installBundledFaces() {
+        prepareDirectories()
+        guard let bundled = Bundle.main.urls(forResourcesWithExtension: "png", subdirectory: "Faces") else {
+            return
+        }
+        for source in bundled {
+            let destination = facesDirectory.appendingPathComponent(source.lastPathComponent)
+            guard !FileManager.default.fileExists(atPath: destination.path) else { continue }
+            try? FileManager.default.copyItem(at: source, to: destination)
+        }
+    }
+
     static func load() {
         prepareDirectories()
+        installBundledFaces()
         cache.removeAll()
         guard let data = try? Data(contentsOf: file),
               let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String]
