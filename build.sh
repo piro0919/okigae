@@ -20,6 +20,27 @@ swiftc \
   Sources/StatusItems.swift Sources/Backdrop.swift Sources/OverlayPanel.swift \
   Sources/Assignments.swift Sources/main.swift
 
+# アプリ本体のアイコン。元絵があれば .icns を組み立てる
+if [ -f Resources/app-icon.png ]; then
+  ICONSET="build/Okigae.iconset"
+  rm -rf "$ICONSET"
+  mkdir -p "$ICONSET"
+  for size in 16 32 128 256 512; do
+    sips -z $size $size Resources/app-icon.png \
+      --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z $((size * 2)) $((size * 2)) Resources/app-icon.png \
+      --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+  done
+  mkdir -p "$APP/Contents/Resources"
+  iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Okigae.icns"
+fi
+
+# メニューバーに出す絵
+if [ -f Resources/menu-icon.png ]; then
+  mkdir -p "$APP/Contents/Resources"
+  cp Resources/menu-icon.png "$APP/Contents/Resources/"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -28,6 +49,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Okigae</string>
   <key>CFBundleDisplayName</key><string>Okigae</string>
   <key>CFBundleExecutable</key><string>Okigae</string>
+  <key>CFBundleIconFile</key><string>Okigae</string>
   <key>CFBundleIdentifier</key><string>io.kkweb.okigae</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>

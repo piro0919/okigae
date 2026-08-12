@@ -75,7 +75,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "M"
+        if let url = Bundle.main.url(forResource: "menu-icon", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            // テンプレート画像にすると、明暗どちらのメニューバーでも macOS が色を合わせる。
+            image.isTemplate = true
+            image.size = NSSize(width: 18, height: 18)
+            item.button?.image = image
+        } else {
+            item.button?.title = "Okigae"
+        }
         item.menu = NSMenu()
         item.menu?.delegate = self
         statusItem = item
