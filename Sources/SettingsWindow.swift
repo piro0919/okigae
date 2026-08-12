@@ -38,9 +38,20 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         scroll.documentView = stack
         scroll.translatesAutoresizingMaskIntoConstraints = false
 
+        let sizeLabel = NSTextField(labelWithString: "絵の大きさ")
+        let size = NSPopUpButton()
+        for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
+            size.addItem(withTitle: String(format: "%.0f%%", value * 100))
+            size.lastItem?.representedObject = value
+        }
+        let current = UserDefaults.standard.double(forKey: "faceScale")
+        size.selectItem(withTitle: String(format: "%.0f%%", (current > 0 ? current : 1.0) * 100))
+        size.target = self
+        size.action = #selector(pickSize(_:))
+
         let openFolder = NSButton(title: "絵のフォルダを開く", target: self, action: #selector(openFacesFolder))
         let refresh = NSButton(title: "一覧を更新", target: self, action: #selector(reload))
-        let footer = NSStackView(views: [openFolder, refresh])
+        let footer = NSStackView(views: [sizeLabel, size, openFolder, refresh])
         footer.orientation = .horizontal
         footer.spacing = 8
         footer.translatesAutoresizingMaskIntoConstraints = false
@@ -141,6 +152,12 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         guard let key = sender.identifier?.rawValue else { return }
         let face = sender.titleOfSelectedItem
         Assignments.set(face: face == "なし" ? nil : face, for: key)
+        onChange?()
+    }
+
+    @objc private func pickSize(_ sender: NSPopUpButton) {
+        guard let value = sender.selectedItem?.representedObject as? Double else { return }
+        UserDefaults.standard.set(value, forKey: "faceScale")
         onChange?()
     }
 

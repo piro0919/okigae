@@ -29,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var didRequestPermission = false
     private var settingsWindow: SettingsWindow?
 
-    /// 絵の大きさ。枠に収まる大きさを 1.0 とした倍率。
+    /// 絵の大きさ。枠に収まる大きさを 1.0 とした倍率。設定画面から変える。
     fileprivate var faceScale: CGFloat {
         let stored = UserDefaults.standard.double(forKey: "faceScale")
         return stored > 0 ? CGFloat(stored) : 1.0
@@ -100,11 +100,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildAll()
     }
 
-    @objc private func setScale(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? Double else { return }
-        UserDefaults.standard.set(value, forKey: "faceScale")
-        rebuildAll()
-    }
 
     @objc private func openSettings() {
         if settingsWindow == nil {
@@ -117,15 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.checkNow()
     }
 
-    @objc private func openFacesFolder() {
-        Assignments.prepareDirectories()
-        NSWorkspace.shared.open(Assignments.facesDirectory)
-    }
 
-    @objc private func reload() {
-        Assignments.load()
-        rebuildAll()
-    }
 
     @objc private func quit() {
         NSApp.terminate(nil)
@@ -175,58 +162,19 @@ extension AppDelegate: NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let faces = Assignments.availableFaces()
-        if faces.isEmpty {
-            let empty = NSMenuItem(title: "絵がありません", action: nil, keyEquivalent: "")
-            empty.isEnabled = false
-            menu.addItem(empty)
-        }
-
-        // 同じ項目が画面ごとに出てくるので、鍵で一意にしてから並べる。
-        var seen = Set<String>()
-        let items = StatusItems.resolved()
-            .sorted { $0.frame.minX < $1.frame.minX }
-            .filter { !$0.key.isEmpty && seen.insert($0.key).inserted }
-
-        for item in items {
-            let entry = NSMenuItem(title: item.key, action: nil, keyEquivalent: "")
-            let submenu = NSMenu()
-            for face in ["なし"] + faces {
-                let choice = NSMenuItem(title: face, action: #selector(assign(_:)), keyEquivalent: "")
-                choice.target = self
-                choice.representedObject = item.key
-                let current = Assignments.table[item.key]
-                choice.state = (face == "なし" ? current == nil : current == face) ? .on : .off
-                submenu.addItem(choice)
-            }
-            entry.submenu = submenu
-            menu.addItem(entry)
-        }
-
-        menu.addItem(.separator())
-        if !CGPreflightScreenCaptureAccess() {
-            menu.addItem(withTitle: "画面収録を許可する（設定を開く）",
-                         action: #selector(openPrivacySettings), keyEquivalent: "")
-        }
+        // 文言は macOS と Sparkle の言い回しに合わせる。
+        // 更新の画面は Sparkle が出すので、そちらの「アップデート」に揃える。
         menu.addItem(withTitle: "設定…", action: #selector(openSettings), keyEquivalent: ",")
-        menu.addItem(withTitle: "更新を確認…", action: #selector(checkForUpdates), keyEquivalent: "")
-        let sizeEntry = NSMenuItem(title: "絵の大きさ", action: nil, keyEquivalent: "")
-        let sizeMenu = NSMenu()
-        for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
-            let choice = NSMenuItem(title: String(format: "%.0f%%", value * 100),
-                                    action: #selector(setScale(_:)), keyEquivalent: "")
-            choice.target = self
-            choice.representedObject = value
-            choice.state = abs(Double(faceScale) - value) < 0.001 ? .on : .off
-            sizeMenu.addItem(choice)
-        }
-        sizeEntry.submenu = sizeMenu
-        menu.addItem(sizeEntry)
+        menu.addItem(withTitle: "アップデートを確認…", action: #selector(checkForUpdates), keyEquivalent: "")
 
-        menu.addItem(withTitle: "絵のフォルダを開く", action: #selector(openFacesFolder), keyEquivalent: "")
-        menu.addItem(withTitle: "設定を読み直す", action: #selector(reload), keyEquivalent: "")
+        if !CGPreflightScreenCaptureAccess() {
+            menu.addItem(.separator())
+            menu.addItem(withTitle: "画面収録を許可…", action: #selector(openPrivacySettings), keyEquivalent: "")
+        }
+
         menu.addItem(.separator())
-        menu.addItem(withTitle: "終了", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(withTitle: "Okigae を終了", action: #selector(quit), keyEquivalent: "q")
+
         for entry in menu.items where entry.action != nil {
             entry.target = self
         }
