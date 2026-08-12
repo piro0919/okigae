@@ -80,7 +80,17 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
         window.contentView = root
         reload()
-        window.setContentSize(root.fittingSize)
+    }
+
+    /// 窓の幅は升目から逆算する。中身の大きさに任せると、行が内側の余白を
+    /// 上回ったときに右の余白が押し出される。
+    private func fitWindow() {
+        guard let window, let root = window.contentView else { return }
+        let inset: CGFloat = 16
+        let gap: CGFloat = 4
+        let widest = CGFloat(max(itemsPerRow, facesPerRow))
+        let width = inset * 2 + widest * cellSide + (widest - 1) * gap
+        window.setContentSize(NSSize(width: width, height: root.fittingSize.height))
     }
 
     private func sectionLabel(_ text: String) -> NSTextField {
@@ -111,9 +121,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         rebuildStrip()
         rebuildFaces()
         updateHint()
-        if let root = window?.contentView {
-            window?.setContentSize(root.fittingSize)
-        }
+        fitWindow()
     }
 
     private func rebuildStrip() {
