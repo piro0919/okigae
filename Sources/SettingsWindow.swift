@@ -18,8 +18,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private var selectedKey: String?
 
     private let cellSide: CGFloat = 46
-    private let charactersPerRow = 6
-    private let itemsPerRow = 8
+    /// 折り返す個数。上段と下段で列を揃える
+    private let perRow = 8
 
     convenience init(onChange: @escaping () -> Void) {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 420),
@@ -93,8 +93,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         guard let window, let root = window.contentView else { return }
         let inset: CGFloat = 16
         let gap: CGFloat = 4
-        let widest = CGFloat(max(itemsPerRow, charactersPerRow))
-        let width = inset * 2 + widest * cellSide + (widest - 1) * gap
+        let columns = CGFloat(perRow)
+        let width = inset * 2 + columns * cellSide + (columns - 1) * gap
         window.setContentSize(NSSize(width: width, height: root.fittingSize.height))
     }
 
@@ -152,7 +152,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             }
             cells.append(cell)
         }
-        for row in rows(of: cells, perRow: itemsPerRow) {
+        for row in rows(of: cells, perRow: perRow) {
             itemStrip.addArrangedSubview(row)
         }
     }
@@ -198,7 +198,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             cells.append(cell)
         }
 
-        for row in rows(of: cells, perRow: charactersPerRow) {
+        for row in rows(of: cells, perRow: perRow) {
             charactersGrid.addArrangedSubview(row)
         }
     }
