@@ -219,16 +219,25 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     // MARK: - 名前と絵
 
-    /// macOS 内部の名前は、そのままでは何のことか分からない。
-    private static let knownNames = [
-        "Clock": "時計",
-        "Battery": "バッテリー",
-        "Sound": "音量",
-        "BentoBox-0": "コントロールセンター",
-        "UserSwitcher": "ユーザ",
-        "Display": "ディスプレイ",
-        "Siri": "Siri",
-        "WiFi": "Wi-Fi",
+    /// macOS 自身の項目。名前も記号も `NSWorkspace` からは引けないので、
+    /// 読み替えと SF Symbols を持っておく。
+    private static let systemItems: [String: (name: String, symbol: String)] = [
+        "Clock": ("時計", "clock"),
+        "Battery": ("バッテリー", "battery.100"),
+        "Sound": ("音量", "speaker.wave.2"),
+        "BentoBox-0": ("コントロールセンター", "switch.2"),
+        "UserSwitcher": ("ユーザ", "person.crop.circle"),
+        "Display": ("ディスプレイ", "display"),
+        "Siri": ("Siri", "mic"),
+        "WiFi": ("Wi-Fi", "wifi"),
+        "AudioVideoModule": ("音声と映像", "video"),
+        "TimeMachine": ("Time Machine", "clock.arrow.circlepath"),
+        "KeyboardBrightness": ("キーボードの明るさ", "keyboard"),
+        "TextInput": ("入力ソース", "character.textbox"),
+        "ScreenMirroring": ("画面ミラーリング", "rectangle.on.rectangle"),
+        "NowPlaying": ("再生中", "play.circle"),
+        "FocusModes": ("集中モード", "moon"),
+        "Bluetooth": ("Bluetooth", "wave.3.right"),
     ]
 
     /// バンドル ID から実際のアプリ名を引く。`com.raycast.macos` を `macos` と
@@ -267,7 +276,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         let base = parts.first ?? key
         let number = Int(parts.count > 1 ? parts[1] : "0") ?? 0
 
-        var name = Self.knownNames[base] ?? appName(forBundleID: base)
+        var name = Self.systemItems[base]?.name ?? appName(forBundleID: base)
             ?? runningAppName(matching: base)
             ?? base.components(separatedBy: ".").last ?? base
         // `Doll_com.hnc.Discord` のように、何のための項目かが入っている場合
@@ -285,6 +294,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     /// どのアプリか分からない項目は、記号で代用する。
     private func originalIcon(of item: StatusItem) -> NSImage? {
         let base = item.key.components(separatedBy: "#").first ?? item.key
+        if let symbol = Self.systemItems[base]?.symbol,
+           let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
+            return image
+        }
         if base.contains("."),
            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: base) {
             return NSWorkspace.shared.icon(forFile: url.path)
