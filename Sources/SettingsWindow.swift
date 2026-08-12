@@ -2,15 +2,25 @@ import AppKit
 
 /// 項目の一覧と、それぞれに当てる絵を選ぶ窓。
 ///
-/// メニューの入れ子でも同じことはできるが、鍵の文字列だけでは
-/// どの行がどのアプリか分かりにくい。本物のアイコンを並べて見せる。
+/// 上段はメニューバーと同じ横一列。下段は絵の一覧を格子で並べる。
+/// 項目を選んでから絵を押す、という順で割り当てる。
+/// 縦積みの一覧に較べて、上段がそのまま仕上がりの下見になる。
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
-    private let stack = NSStackView()
+    private let itemStrip = NSStackView()
+    private let facesGrid = NSStackView()
+    private let hint = NSTextField(labelWithString: "")
+
     private var onChange: (() -> Void)?
+    private var items: [StatusItem] = []
+    private var selectedKey: String?
+
+    private let cellSide: CGFloat = 46
+    private let facesPerRow = 6
+    private let itemsPerRow = 8
 
     convenience init(onChange: @escaping () -> Void) {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 460),
-                              styleMask: [.titled, .closable, .miniaturizable, .resizable],
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 420),
+                              styleMask: [.titled, .closable, .miniaturizable],
                               backing: .buffered,
                               defer: false)
         window.title = "Okigae 設定"
@@ -24,19 +34,21 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         build()
     }
 
+    // MARK: - 組み立て
+
     private func build() {
         guard let window else { return }
 
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 6
-        stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        itemStrip.orientation = .vertical
+        itemStrip.spacing = 4
+        itemStrip.alignment = .leading
 
-        let scroll = NSScrollView()
-        scroll.hasVerticalScroller = true
-        scroll.drawsBackground = false
-        scroll.documentView = stack
-        scroll.translatesAutoresizingMaskIntoConstraints = false
+        hint.textColor = .secondaryLabelColor
+        hint.font = .systemFont(ofSize: 11)
+
+        facesGrid.orientation = .vertical
+        facesGrid.spacing = 4
+        facesGrid.alignment = .leading
 
         let sizeLabel = NSTextField(labelWithString: "絵の大きさ")
         let size = NSPopUpButton()
@@ -44,100 +56,139 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             size.addItem(withTitle: String(format: "%.0f%%", value * 100))
             size.lastItem?.representedObject = value
         }
-        let current = UserDefaults.standard.double(forKey: "faceScale")
-        size.selectItem(withTitle: String(format: "%.0f%%", (current > 0 ? current : 1.0) * 100))
+        let stored = UserDefaults.standard.double(forKey: "faceScale")
+        size.selectItem(withTitle: String(format: "%.0f%%", (stored > 0 ? stored : 1.0) * 100))
         size.target = self
         size.action = #selector(pickSize(_:))
 
         let openFolder = NSButton(title: "絵のフォルダを開く", target: self, action: #selector(openFacesFolder))
-        let refresh = NSButton(title: "一覧を更新", target: self, action: #selector(reload))
+        let refresh = NSButton(title: "更新", target: self, action: #selector(reload))
+
         let footer = NSStackView(views: [sizeLabel, size, openFolder, refresh])
         footer.orientation = .horizontal
         footer.spacing = 8
-        footer.translatesAutoresizingMaskIntoConstraints = false
 
-        let content = NSView()
-        content.addSubview(scroll)
-        content.addSubview(footer)
-        window.contentView = content
-
-        NSLayoutConstraint.activate([
-            scroll.topAnchor.constraint(equalTo: content.topAnchor),
-            scroll.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            scroll.bottomAnchor.constraint(equalTo: footer.topAnchor, constant: -8),
-            footer.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
-            footer.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
+        let root = NSStackView(views: [
+            sectionLabel("メニューバーの項目"), itemStrip, hint,
+            sectionLabel("絵"), facesGrid, footer,
         ])
+        root.orientation = .vertical
+        root.alignment = .leading
+        root.spacing = 10
+        root.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        root.setCustomSpacing(16, after: hint)
 
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.widthAnchor.constraint(equalTo: scroll.widthAnchor).isActive = true
-
+        window.contentView = root
         reload()
+        window.setContentSize(root.fittingSize)
     }
 
-    @objc private func reload() {
-        stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+    private func sectionLabel(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: 11, weight: .semibold)
+        label.textColor = .secondaryLabelColor
+        return label
+    }
 
-        let faces = Assignments.availableFaces()
+    // MARK: - 中身
+
+    @objc private func reload() {
+        // 二つの画面の項目が混ざると並び順が壊れる。項目数が最も多い画面を基準にする。
+        let all = StatusItems.resolved().filter { !$0.key.isEmpty && !$0.key.hasPrefix("Item-") }
+        var byDisplay: [CGDirectDisplayID: [StatusItem]] = [:]
+        for item in all {
+            guard let host = StatusItems.screen(containing: item.frame) else { continue }
+            byDisplay[StatusItems.displayID(of: host), default: []].append(item)
+        }
         var seen = Set<String>()
-        let items = StatusItems.resolved()
-            .filter { !$0.key.isEmpty }
+        items = (byDisplay.values.max(by: { $0.count < $1.count }) ?? [])
             .sorted { $0.frame.minX < $1.frame.minX }
             .filter { seen.insert($0.key).inserted }
 
-        if items.isEmpty {
-            let empty = NSTextField(labelWithString: "項目が見つかりません。画面収録の許可を確認してください。")
-            stack.addArrangedSubview(empty)
+        if selectedKey == nil || !items.contains(where: { $0.key == selectedKey }) {
+            selectedKey = items.first?.key
+        }
+        rebuildStrip()
+        rebuildFaces()
+        updateHint()
+        if let root = window?.contentView {
+            window?.setContentSize(root.fittingSize)
+        }
+    }
+
+    private func rebuildStrip() {
+        itemStrip.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        var cells: [NSView] = []
+        for item in items {
+            let assigned = Assignments.image(for: item.key)
+            let cell = Cell(image: assigned ?? originalIcon(of: item),
+                            side: cellSide,
+                            selected: item.key == selectedKey,
+                            dimmed: assigned == nil)
+            cell.toolTip = displayName(for: item.key)
+            cell.onClick = { [weak self] in
+                self?.selectedKey = item.key
+                self?.rebuildStrip()
+                self?.rebuildFaces()
+                self?.updateHint()
+            }
+            cells.append(cell)
+        }
+        for row in rows(of: cells, perRow: itemsPerRow) {
+            itemStrip.addArrangedSubview(row)
+        }
+    }
+
+    /// 折り返して行にまとめる。
+    private func rows(of cells: [NSView], perRow: Int) -> [NSStackView] {
+        stride(from: 0, to: cells.count, by: perRow).map { start in
+            let row = NSStackView(views: Array(cells[start..<min(start + perRow, cells.count)]))
+            row.orientation = .horizontal
+            row.spacing = 4
+            return row
+        }
+    }
+
+    private func rebuildFaces() {
+        facesGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        let current = selectedKey.flatMap { Assignments.table[$0] }
+
+        var cells: [NSView] = []
+        let none = Cell(image: nil, side: cellSide, selected: current == nil, dimmed: false)
+        none.label = "なし"
+        none.onClick = { [weak self] in self?.assign(nil) }
+        cells.append(none)
+
+        for face in Assignments.availableFaces() {
+            let image = NSImage(contentsOf: Assignments.facesDirectory.appendingPathComponent("\(face).png"))
+            let cell = Cell(image: image, side: cellSide, selected: current == face, dimmed: false)
+            cell.toolTip = face
+            cell.onClick = { [weak self] in self?.assign(face) }
+            cells.append(cell)
+        }
+
+        for row in rows(of: cells, perRow: facesPerRow) {
+            facesGrid.addArrangedSubview(row)
+        }
+    }
+
+    private func updateHint() {
+        guard let key = selectedKey else {
+            hint.stringValue = "項目が見つかりません。画面収録の許可を確認してください。"
             return
         }
-
-        for item in items {
-            // `Item-0` しか名前が無い項目は、どのアプリのものか分からない。
-            // 選ばせても割り当てが安定しないので出さない。
-            guard !item.key.hasPrefix("Item-") else { continue }
-            stack.addArrangedSubview(row(for: item, faces: faces))
-        }
+        hint.stringValue = "\(displayName(for: key)) に当てる絵を選んでください"
     }
 
-    private func row(for item: StatusItem, faces: [String]) -> NSView {
-        let preview = NSImageView()
-        preview.image = originalIcon(of: item)
-        preview.imageScaling = .scaleProportionallyDown
-        preview.translatesAutoresizingMaskIntoConstraints = false
-        preview.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        preview.heightAnchor.constraint(equalToConstant: 22).isActive = true
-
-        let label = NSTextField(labelWithString: displayName(for: item.key))
-        label.lineBreakMode = .byTruncatingMiddle
-        label.toolTip = item.key
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.widthAnchor.constraint(equalToConstant: 200).isActive = true
-
-        let picker = NSPopUpButton()
-        picker.translatesAutoresizingMaskIntoConstraints = false
-        picker.widthAnchor.constraint(equalToConstant: 130).isActive = true
-        picker.addItem(withTitle: "なし")
-        for face in faces {
-            picker.addItem(withTitle: face)
-            if let image = NSImage(contentsOf: Assignments.facesDirectory
-                .appendingPathComponent("\(face).png")) {
-                image.size = NSSize(width: 16, height: 16)
-                picker.lastItem?.image = image
-            }
-        }
-        // 絵が消えている割り当てが残っていると、選択欄が空欄になる。「なし」に寄せる。
-        let current = Assignments.table[item.key]
-        picker.selectItem(withTitle: faces.contains(current ?? "") ? (current ?? "なし") : "なし")
-        picker.target = self
-        picker.action = #selector(pick(_:))
-        picker.identifier = NSUserInterfaceItemIdentifier(item.key)
-
-        let row = NSStackView(views: [preview, label, picker])
-        row.orientation = .horizontal
-        row.spacing = 8
-        return row
+    private func assign(_ face: String?) {
+        guard let key = selectedKey else { return }
+        Assignments.set(face: face, for: key)
+        onChange?()
+        rebuildStrip()
+        rebuildFaces()
     }
+
+    // MARK: - 名前と絵
 
     /// macOS 内部の名前は、そのままでは何のことか分からない。
     private static let knownNames = [
@@ -161,13 +212,35 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             .replacingOccurrences(of: ".app", with: "")
     }
 
+    /// バンドル ID を持たない名前を、動いているアプリと突き合わせる。
+    ///
+    /// 項目のタイトルは `raycastIcon` や `ItsycalStatusItem` のように、
+    /// アプリ名を含んでいることが多い。字だけを取り出して照合する。
+    private func runningAppName(matching title: String) -> String? {
+        let needle = title.lowercased().filter { $0.isLetter }
+        guard needle.count >= 4 else { return nil }
+
+        var best: (name: String, length: Int)?
+        for app in NSWorkspace.shared.runningApplications {
+            guard let name = app.localizedName else { continue }
+            let candidate = name.lowercased().filter { $0.isLetter }
+            // 短い名前は他の語に埋もれる。`Doll` が `Dollar` に当たるような取り違えを避ける
+            guard candidate.count >= 4, needle.contains(candidate) else { continue }
+            // 複数当たったら、より長く一致したほうを採る
+            if best == nil || candidate.count > best!.length { best = (name, candidate.count) }
+        }
+        return best?.name
+    }
+
     /// 鍵は `io.kkweb.konechi#0` のような形。人に見せる形へ直す。
     private func displayName(for key: String) -> String {
         let parts = key.components(separatedBy: "#")
         let base = parts.first ?? key
         let number = Int(parts.count > 1 ? parts[1] : "0") ?? 0
 
-        var name = Self.knownNames[base] ?? appName(forBundleID: base) ?? base.components(separatedBy: ".").last ?? base
+        var name = Self.knownNames[base] ?? appName(forBundleID: base)
+            ?? runningAppName(matching: base)
+            ?? base.components(separatedBy: ".").last ?? base
         // `Doll_com.hnc.Discord` のように、何のための項目かが入っている場合
         if base.contains("_"), let owner = base.components(separatedBy: "_").first {
             let target = base.components(separatedBy: "_").dropFirst().joined(separator: "_")
@@ -176,18 +249,32 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         return number == 0 ? name : "\(name) の \(number + 1) 個目"
     }
 
-    /// その項目が本来出しているアイコンを撮る。どの行が何かを見分けるため。
+    /// 未割り当ての項目に何を出すか。
+    ///
+    /// メニューバーの見た目を撮る手も試したが、板が乗っている状態では
+    /// 安定して撮れなかった。アプリのアイコンを使う。
+    /// どのアプリか分からない項目は、記号で代用する。
     private func originalIcon(of item: StatusItem) -> NSImage? {
-        guard let captured = Backdrop.capture(region: item.frame, of: item.windowID) else { return nil }
-        return NSImage(cgImage: captured, size: NSSize(width: item.frame.width, height: item.frame.height))
+        let base = item.key.components(separatedBy: "#").first ?? item.key
+        if base.contains("."),
+           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: base) {
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+        // `Doll_com.hnc.Discord` のように、対象のバンドル ID が入っている場合
+        if let tail = base.components(separatedBy: "_").dropFirst().first,
+           tail.contains("."),
+           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: tail) {
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+        if let name = runningAppName(matching: base),
+           let app = NSWorkspace.shared.runningApplications.first(where: { $0.localizedName == name }),
+           let url = app.bundleURL {
+            return NSWorkspace.shared.icon(forFile: url.path)
+        }
+        return NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: nil)
     }
 
-    @objc private func pick(_ sender: NSPopUpButton) {
-        guard let key = sender.identifier?.rawValue else { return }
-        let face = sender.titleOfSelectedItem
-        Assignments.set(face: face == "なし" ? nil : face, for: key)
-        onChange?()
-    }
+    // MARK: - 操作
 
     @objc private func pickSize(_ sender: NSPopUpButton) {
         guard let value = sender.selectedItem?.representedObject as? Double else { return }
@@ -216,5 +303,74 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+    }
+}
+
+// MARK: - 升目ひとつ
+
+/// 項目や絵を一つ表すます。選択中は枠が付く。
+private final class Cell: NSView {
+    var onClick: (() -> Void)?
+    var label: String? { didSet { needsDisplay = true } }
+
+    private let image: NSImage?
+    private let selected: Bool
+    private let dimmed: Bool
+
+    init(image: NSImage?, side: CGFloat, selected: Bool, dimmed: Bool) {
+        self.image = image
+        self.selected = selected
+        self.dimmed = dimmed
+        super.init(frame: NSRect(x: 0, y: 0, width: side, height: side))
+        translatesAutoresizingMaskIntoConstraints = false
+        widthAnchor.constraint(equalToConstant: side).isActive = true
+        heightAnchor.constraint(equalToConstant: side).isActive = true
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) は使わない") }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let box = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 6, yRadius: 6)
+        if selected {
+            NSColor.controlAccentColor.withAlphaComponent(0.25).setFill()
+            box.fill()
+            NSColor.controlAccentColor.setStroke()
+            box.lineWidth = 2
+            box.stroke()
+        } else {
+            NSColor.quaternaryLabelColor.withAlphaComponent(0.35).setFill()
+            box.fill()
+        }
+
+        if let image {
+            let inset = bounds.insetBy(dx: 5, dy: 5)
+            let fit = min(inset.width / image.size.width, inset.height / image.size.height)
+            let size = NSSize(width: image.size.width * fit, height: image.size.height * fit)
+            image.draw(in: NSRect(x: bounds.midX - size.width / 2,
+                                  y: bounds.midY - size.height / 2,
+                                  width: size.width, height: size.height),
+                       from: .zero, operation: .sourceOver, fraction: dimmed ? 0.45 : 1)
+        } else if let label {
+            // 絵が無いと他の升目と釣り合わないので、斜線を敷く
+            let slash = NSBezierPath()
+            slash.move(to: NSPoint(x: bounds.minX + 10, y: bounds.minY + 10))
+            slash.line(to: NSPoint(x: bounds.maxX - 10, y: bounds.maxY - 10))
+            NSColor.quaternaryLabelColor.setStroke()
+            slash.lineWidth = 2
+            slash.stroke()
+
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 10),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ]
+            let text = label as NSString
+            let size = text.size(withAttributes: attributes)
+            text.draw(at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2),
+                      withAttributes: attributes)
+        }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onClick?()
     }
 }
