@@ -37,7 +37,7 @@ way to tell which item belongs to which app.
 ## Assignments
 
 Settings live in `~/Library/Application Support/Okigae/assignments.json`, artwork in
-`Faces/<name>.png` beside it. The menu bar item writes the same file when you pick from it.
+`Characters/<name>.png` beside it. The menu bar item writes the same file when you pick from it.
 
 The key is the item's window title plus an ordinal.
 
@@ -69,14 +69,14 @@ Ad-hoc signing changes the signature on every build, which makes macOS treat eac
 as a different app and drops the screen recording grant every time. A stable certificate
 keeps it.
 
-## Artwork
+## Characters
 
-How it is generated, and what eight attempts taught us, is in [docs/faces.md](docs/faces.md).
+How it is generated, and what eight attempts taught us, is in [docs/characters.md](docs/characters.md).
 
 Generated PNGs carry transparent margins, so square them before dropping them in:
 
 ```bash
-swift Tools/square.swift <generated.png> ~/Library/Application\ Support/Okigae/Faces/<name>.png
+swift Tools/square.swift <generated.png> ~/Library/Application\ Support/Okigae/Characters/<name>.png
 ```
 
 ## Releasing

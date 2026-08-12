@@ -45,7 +45,7 @@ enum Assignments {
     ///
     /// 配布した相手の環境には何も無いので、初回は選べる絵が一つも無い状態から始まる。
     /// アプリの中に 8 体持たせて、初回起動で置く。
-    static func installBundledFaces() {
+    static func installBundledCharacters() {
         prepareDirectories()
         guard let bundled = Bundle.main.urls(forResourcesWithExtension: "png", subdirectory: "Characters") else {
             return
@@ -59,7 +59,7 @@ enum Assignments {
 
     static func load() {
         prepareDirectories()
-        installBundledFaces()
+        installBundledCharacters()
         cache.removeAll()
         guard let data = try? Data(contentsOf: file),
               let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String]

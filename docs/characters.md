@@ -71,9 +71,9 @@ Silver's outline is too weak; it is the one worth redrawing.
 Generated PNGs carry transparent margins, so square them first.
 
 ```bash
-swift Tools/square.swift <generated.png> ~/Library/Application\ Support/Okigae/Faces/<name>.png
+swift Tools/square.swift <generated.png> ~/Library/Application\ Support/Okigae/Characters/<name>.png
 ```
 
 `Tools/square.swift` finds the bounding box of the opaque pixels and centres it on a
-square canvas. Whatever you name the file in `Faces` becomes the choice in the menu and
+square canvas. Whatever you name the file in `Characters` becomes the choice in the menu and
 the value in `assignments.json`.

@@ -7,7 +7,7 @@ import AppKit
 /// 縦積みの一覧に較べて、上段がそのまま仕上がりの下見になる。
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let itemStrip = NSStackView()
-    private let facesGrid = NSStackView()
+    private let charactersGrid = NSStackView()
     private let hint = NSTextField(labelWithString: "")
 
     private var onChange: (() -> Void)?
@@ -15,7 +15,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private var selectedKey: String?
 
     private let cellSide: CGFloat = 46
-    private let facesPerRow = 6
+    private let charactersPerRow = 6
     private let itemsPerRow = 8
 
     convenience init(onChange: @escaping () -> Void) {
@@ -46,9 +46,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         hint.textColor = .secondaryLabelColor
         hint.font = .systemFont(ofSize: 11)
 
-        facesGrid.orientation = .vertical
-        facesGrid.spacing = 4
-        facesGrid.alignment = .leading
+        charactersGrid.orientation = .vertical
+        charactersGrid.spacing = 4
+        charactersGrid.alignment = .leading
 
         let sizeLabel = NSTextField(labelWithString: "大きさ")
         let size = NSPopUpButton()
@@ -61,7 +61,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         size.target = self
         size.action = #selector(pickSize(_:))
 
-        let openFolder = NSButton(title: "フォルダを開く", target: self, action: #selector(openFacesFolder))
+        let openFolder = NSButton(title: "フォルダを開く", target: self, action: #selector(openCharactersFolder))
         let refresh = NSButton(title: "更新", target: self, action: #selector(reload))
 
         let footer = NSStackView(views: [sizeLabel, size, openFolder, refresh])
@@ -70,7 +70,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
         let root = NSStackView(views: [
             sectionLabel("メニューバーの項目"), itemStrip, hint,
-            sectionLabel("キャラクター"), facesGrid, footer,
+            sectionLabel("キャラクター"), charactersGrid, footer,
         ])
         root.orientation = .vertical
         root.alignment = .leading
@@ -88,7 +88,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         guard let window, let root = window.contentView else { return }
         let inset: CGFloat = 16
         let gap: CGFloat = 4
-        let widest = CGFloat(max(itemsPerRow, facesPerRow))
+        let widest = CGFloat(max(itemsPerRow, charactersPerRow))
         let width = inset * 2 + widest * cellSide + (widest - 1) * gap
         window.setContentSize(NSSize(width: width, height: root.fittingSize.height))
     }
@@ -119,7 +119,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             selectedKey = items.first?.key
         }
         rebuildStrip()
-        rebuildFaces()
+        rebuildCharacters()
         updateHint()
         fitWindow()
     }
@@ -137,7 +137,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             cell.onClick = { [weak self] in
                 self?.selectedKey = item.key
                 self?.rebuildStrip()
-                self?.rebuildFaces()
+                self?.rebuildCharacters()
                 self?.updateHint()
             }
             cells.append(cell)
@@ -157,8 +157,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         }
     }
 
-    private func rebuildFaces() {
-        facesGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
+    private func rebuildCharacters() {
+        charactersGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
         let current = selectedKey.flatMap { Assignments.table[$0] }
 
         var cells: [NSView] = []
@@ -176,8 +176,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             cells.append(cell)
         }
 
-        for row in rows(of: cells, perRow: facesPerRow) {
-            facesGrid.addArrangedSubview(row)
+        for row in rows(of: cells, perRow: charactersPerRow) {
+            charactersGrid.addArrangedSubview(row)
         }
     }
 
@@ -194,7 +194,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         Assignments.set(character: character, for: key)
         onChange?()
         rebuildStrip()
-        rebuildFaces()
+        rebuildCharacters()
     }
 
     // MARK: - 名前と絵
@@ -291,7 +291,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         onChange?()
     }
 
-    @objc private func openFacesFolder() {
+    @objc private func openCharactersFolder() {
         Assignments.prepareDirectories()
         NSWorkspace.shared.open(Assignments.charactersDirectory)
     }
