@@ -13,7 +13,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered,
                               defer: false)
-        window.title = "Okigae"
+        window.title = "Okigae 設定"
         window.center()
         // 全画面のアプリが手前にあると、常駐アプリの窓は元の Space に開いてしまう。
         // 呼ばれた場所に出す。
@@ -93,6 +93,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         }
 
         for item in items {
+            // `Item-0` しか名前が無い項目は、どのアプリのものか分からない。
+            // 選ばせても割り当てが安定しないので出さない。
+            guard !item.key.hasPrefix("Item-") else { continue }
             stack.addArrangedSubview(row(for: item, faces: faces))
         }
     }
@@ -136,10 +139,41 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         return row
     }
 
-    /// 鍵は `io.kkweb.konechi#0` のような形なので、末尾だけを見せる。
+    /// macOS 内部の名前は、そのままでは何のことか分からない。
+    private static let knownNames = [
+        "Clock": "時計",
+        "Battery": "バッテリー",
+        "Sound": "音量",
+        "BentoBox-0": "コントロールセンター",
+        "UserSwitcher": "ユーザ",
+        "Display": "ディスプレイ",
+        "Siri": "Siri",
+        "WiFi": "Wi-Fi",
+    ]
+
+    /// バンドル ID から実際のアプリ名を引く。`com.raycast.macos` を `macos` と
+    /// 見せても伝わらない。
+    private func appName(forBundleID id: String) -> String? {
+        guard id.contains("."),
+              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
+        else { return nil }
+        return FileManager.default.displayName(atPath: url.path)
+            .replacingOccurrences(of: ".app", with: "")
+    }
+
+    /// 鍵は `io.kkweb.konechi#0` のような形。人に見せる形へ直す。
     private func displayName(for key: String) -> String {
-        let base = key.hasSuffix("#0") ? String(key.dropLast(2)) : key
-        return base.components(separatedBy: ".").last ?? base
+        let parts = key.components(separatedBy: "#")
+        let base = parts.first ?? key
+        let number = Int(parts.count > 1 ? parts[1] : "0") ?? 0
+
+        var name = Self.knownNames[base] ?? appName(forBundleID: base) ?? base.components(separatedBy: ".").last ?? base
+        // `Doll_com.hnc.Discord` のように、何のための項目かが入っている場合
+        if base.contains("_"), let owner = base.components(separatedBy: "_").first {
+            let target = base.components(separatedBy: "_").dropFirst().joined(separator: "_")
+            name = "\(owner)（\(target.components(separatedBy: ".").last ?? target)）"
+        }
+        return number == 0 ? name : "\(name) の \(number + 1) 個目"
     }
 
     /// その項目が本来出しているアイコンを撮る。どの行が何かを見分けるため。

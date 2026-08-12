@@ -81,6 +81,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <!-- これが無いと Sparkle の画面が英語で出る。訳は Sparkle 側が持っている -->
+  <key>CFBundleDevelopmentRegion</key><string>ja</string>
+  <key>CFBundleLocalizations</key>
+  <array><string>ja</string><string>en</string></array>
   <!-- Dock とアプリ切替に出さず、メニューバーだけに常駐させる -->
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
