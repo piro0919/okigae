@@ -68,17 +68,29 @@ enum StatusItems {
     /// もう片方では空だったり `Item-0` だったりする。右端からの並び順と幅は
     /// 画面をまたいで一致するので、突き合わせて良いほうの名前を採る。
     static func resolved() -> [StatusItem] {
-        var byDisplay: [CGDirectDisplayID: [StatusItem]] = [:]
-        var occupied: Set<String> = []
-        // 一覧は前面から順に並ぶ。同じ位置に複数のウィンドウを持つアプリがあるので、
-        // 前面のものだけを残す。残さないと同じ項目が二重に数えられ、
-        // 通し番号がずれて割り当てが外れる。
+        // 同じ位置に複数のウィンドウを持つアプリがある。二重に数えると通し番号が
+        // ずれて割り当てが外れるので、位置ごとに一つへ絞る。
+        // 前面のものを採ると名前を落とすことがあるため、名前の良いほうを残す。
+        var bySpot: [String: (display: CGDirectDisplayID, item: StatusItem)] = [:]
+        var order: [String] = []
         for item in raw() {
             guard let host = screen(containing: item.frame) else { continue }
             let display = displayID(of: host)
             let spot = "\(display)|\(Int(item.frame.minX))|\(Int(item.frame.width))"
-            guard occupied.insert(spot).inserted else { continue }
-            byDisplay[display, default: []].append(item)
+            if let existing = bySpot[spot] {
+                if titleScore(item.key) > titleScore(existing.item.key) {
+                    bySpot[spot] = (display, item)
+                }
+            } else {
+                bySpot[spot] = (display, item)
+                order.append(spot)
+            }
+        }
+
+        var byDisplay: [CGDirectDisplayID: [StatusItem]] = [:]
+        for spot in order {
+            guard let entry = bySpot[spot] else { continue }
+            byDisplay[entry.display, default: []].append(entry.item)
         }
         let lists = byDisplay.values.map { $0.sorted { $0.frame.minX > $1.frame.minX } }
 
@@ -105,7 +117,11 @@ enum StatusItems {
         var resolved: [StatusItem] = []
         for items in lists {
             let titled = items.enumerated().map { index, item in
-                StatusItem(windowID: item.windowID, key: bestTitle[index] ?? item.key, frame: item.frame)
+                // 自分のタイトルが具体的なら、それを使う。
+                // 画面ごとに項目数が食い違うと右端からの位置がずれるので、
+                // 借りるのは自分の名前が空か `Item-0` のときだけにする。
+                let borrowed = titleScore(item.key) >= 2 ? item.key : (bestTitle[index] ?? item.key)
+                return StatusItem(windowID: item.windowID, key: borrowed, frame: item.frame)
             }
             var counters: [String: Int] = [:]
             var keyByWindow: [CGWindowID: String] = [:]

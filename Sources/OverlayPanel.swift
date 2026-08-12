@@ -33,6 +33,10 @@ final class OverlayPanel: NSPanel {
     private let faceView: FaceView
     /// 背景を撮った時の矩形。変わらないうちは撮り直さない。
     private var capturedRegion: CGRect = .null
+    /// 撮った時刻。板が動かなくても背景のほうが変わることがある。
+    /// 壁紙の変更や、メニューバーの透明度の切り替えがそれに当たる。
+    private var capturedAt: CFAbsoluteTime = 0
+    private let staleAfter: CFAbsoluteTime = 3
 
     init(item: StatusItem, image: NSImage, scale: CGFloat) {
         let frame = StatusItems.toAppKit(item.frame)
@@ -82,11 +86,13 @@ final class OverlayPanel: NSPanel {
 
     /// 背景を撮り直す。画面をまたぐと壁紙が変わるので、位置が動いたら撮る。
     func refreshBackdrop(region: CGRect, windowID: CGWindowID, force: Bool = false) {
-        guard force || region != capturedRegion else { return }
+        let aged = CFAbsoluteTimeGetCurrent() - capturedAt > staleAfter
+        guard force || region != capturedRegion || aged else { return }
         // 板を隠す必要はない。撮る対象は項目より下にあるものだけで、
         // 板は項目より前面にあるため写り込まない。隠すと一瞬だけ本物が見えてちらつく。
         guard let captured = Backdrop.capture(region: region, below: windowID) else { return }
         backdropView.image = NSImage(cgImage: captured, size: backdropView.bounds.size)
         capturedRegion = region
+        capturedAt = CFAbsoluteTimeGetCurrent()
     }
 }
