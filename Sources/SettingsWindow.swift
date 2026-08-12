@@ -133,7 +133,11 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
                             side: cellSide,
                             selected: item.key == selectedKey,
                             dimmed: assigned == nil)
-            cell.toolTip = displayName(for: item.key)
+            let name = displayName(for: item.key)
+            cell.toolTip = name
+            cell.onHover = { [weak self] inside in
+                self?.showHover(inside ? name : nil)
+            }
             cell.onClick = { [weak self] in
                 self?.selectedKey = item.key
                 self?.rebuildStrip()
@@ -164,6 +168,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         var cells: [NSView] = []
         let none = Cell(image: nil, side: cellSide, selected: current == nil, dimmed: false)
         none.label = "なし"
+        none.toolTip = "なし"
+        none.onHover = { [weak self] inside in
+            self?.showHover(inside ? "なし" : nil)
+        }
         none.onClick = { [weak self] in self?.assign(nil) }
         cells.append(none)
 
@@ -172,12 +180,24 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
                 .appendingPathComponent("\(character).png"))
             let cell = Cell(image: image, side: cellSide, selected: current == character, dimmed: false)
             cell.toolTip = character
+            cell.onHover = { [weak self] inside in
+                self?.showHover(inside ? character : nil)
+            }
             cell.onClick = { [weak self] in self?.assign(character) }
             cells.append(cell)
         }
 
         for row in rows(of: cells, perRow: charactersPerRow) {
             charactersGrid.addArrangedSubview(row)
+        }
+    }
+
+    /// ホバー中はその名前を出し、外れたら元の案内へ戻す。
+    private func showHover(_ name: String?) {
+        if let name {
+            hint.stringValue = name
+        } else {
+            updateHint()
         }
     }
 
@@ -233,9 +253,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         for app in NSWorkspace.shared.runningApplications {
             guard let name = app.localizedName else { continue }
             let candidate = name.lowercased().filter { $0.isLetter }
-            // 短い名前は他の語に埋もれる。`Doll` が `Dollar` に当たるような取り違えを避ける
-            guard candidate.count >= 4, needle.contains(candidate) else { continue }
-            // 複数当たったら、より長く一致したほうを採る
+            // 途中に含まれるだけの一致は取り違えが多い。頭から一致した場合だけ採る。
+            // `ItsycalStatusItem` は当たり、`rocket_status_item` はどれにも当たらない。
+            guard candidate.count >= 4, needle.hasPrefix(candidate) else { continue }
             if best == nil || candidate.count > best!.length { best = (name, candidate.count) }
         }
         return best?.name
@@ -320,6 +340,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 /// 項目やキャラクターを一つ表すます。選択中は枠が付く。
 private final class Cell: NSView {
     var onClick: (() -> Void)?
+    var onHover: ((Bool) -> Void)?
     var label: String? { didSet { needsDisplay = true } }
 
     private let image: NSImage?
@@ -382,4 +403,15 @@ private final class Cell: NSView {
     override func mouseDown(with event: NSEvent) {
         onClick?()
     }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach { removeTrackingArea($0) }
+        addTrackingArea(NSTrackingArea(rect: bounds,
+                                       options: [.mouseEnteredAndExited, .activeInKeyWindow],
+                                       owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
 }
