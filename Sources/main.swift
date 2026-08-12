@@ -1,0 +1,209 @@
+import AppKit
+
+@main
+enum Okigae {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        app.run()
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// 項目ひとつにつき板ひとつ。
+    ///
+    /// 鍵にウィンドウ ID は使えない。同じ項目に対して複数のウィンドウが存在し、
+    /// 画面に出るほうが数秒ごとに入れ替わるアプリがある。ID で対応付けると
+    /// 入れ替わりのたびに板を作り直すことになり、その隙間が見えてちらつく。
+    private var panels: [String: OverlayPanel] = [:]
+
+    /// 画面と項目の組をひとつの鍵にする。
+    private func panelKey(for item: StatusItem) -> String {
+        let display = StatusItems.screen(containing: item.frame).map { StatusItems.displayID(of: $0) } ?? 0
+        return "\(display)|\(item.key)"
+    }
+    private var statusItem: NSStatusItem?
+    private var timer: Timer?
+    private var didRequestPermission = false
+
+    /// 絵の大きさ。枠に収まる大きさを 1.0 とした倍率。
+    fileprivate var faceScale: CGFloat {
+        let stored = UserDefaults.standard.double(forKey: "faceScale")
+        return stored > 0 ? CGFloat(stored) : 1.0
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Assignments.load()
+        installStatusItem()
+
+        sync()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            self?.sync()
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        timer?.invalidate()
+        panels.values.forEach { $0.orderOut(nil) }
+    }
+
+    // MARK: - 権限
+
+    /// 画面収録の権限を確かめる。
+    ///
+    /// 背景の撮影だけでなく、項目の識別にも要る。権限が無いとウィンドウタイトルが
+    /// 空で返り、どの項目がどのアプリのものか分からなくなる。
+    /// 許可は取り消されることもあるので、待つだけで終了はしない。
+    private func hasPermission() -> Bool {
+        if CGPreflightScreenCaptureAccess() { return true }
+        if !didRequestPermission {
+            didRequestPermission = true
+            // 初回はこれで許可を求める画面が出る。許可した後はアプリの開き直しが要る。
+            CGRequestScreenCaptureAccess()
+        }
+        return false
+    }
+
+    @objc private func openPrivacySettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    // MARK: - 自分のメニュー
+
+    private func installStatusItem() {
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.button?.title = "M"
+        item.menu = NSMenu()
+        item.menu?.delegate = self
+        statusItem = item
+    }
+
+    @objc private func assign(_ sender: NSMenuItem) {
+        guard let key = sender.representedObject as? String else { return }
+        let face = sender.title == "なし" ? nil : sender.title
+        Assignments.set(face: face, for: key)
+        rebuildAll()
+    }
+
+    @objc private func setScale(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? Double else { return }
+        UserDefaults.standard.set(value, forKey: "faceScale")
+        rebuildAll()
+    }
+
+    @objc private func openFacesFolder() {
+        Assignments.prepareDirectories()
+        NSWorkspace.shared.open(Assignments.facesDirectory)
+    }
+
+    @objc private func reload() {
+        Assignments.load()
+        rebuildAll()
+    }
+
+    @objc private func quit() {
+        NSApp.terminate(nil)
+    }
+
+    // MARK: - 板の同期
+
+    private func rebuildAll() {
+        panels.values.forEach { $0.orderOut(nil) }
+        panels.removeAll()
+        sync()
+    }
+
+    private func sync() {
+        guard hasPermission() else {
+            statusItem?.button?.title = "M?"
+            return
+        }
+        statusItem?.button?.title = "M"
+        let items = StatusItems.resolved().filter { !$0.key.isEmpty }
+        var alive = Set<String>()
+
+        for item in items {
+            let key = panelKey(for: item)
+            guard let image = Assignments.image(for: item.key) else { continue }
+            alive.insert(key)
+            if let panel = panels[key] {
+                panel.update(item: item, image: image, scale: faceScale)
+            } else {
+                let panel = OverlayPanel(item: item, image: image, scale: faceScale)
+                panel.refreshBackdrop(region: item.frame, windowID: item.windowID, force: true)
+                panels[key] = panel
+            }
+        }
+
+        // 消えた項目と、割り当てを外された項目の板を片付ける。
+        for (key, panel) in panels where !alive.contains(key) {
+            panel.orderOut(nil)
+            panels[key] = nil
+        }
+    }
+}
+
+// MARK: - メニューの中身
+
+extension AppDelegate: NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+
+        let faces = Assignments.availableFaces()
+        if faces.isEmpty {
+            let empty = NSMenuItem(title: "絵がありません", action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+        }
+
+        // 同じ項目が画面ごとに出てくるので、鍵で一意にしてから並べる。
+        var seen = Set<String>()
+        let items = StatusItems.resolved()
+            .sorted { $0.frame.minX < $1.frame.minX }
+            .filter { !$0.key.isEmpty && seen.insert($0.key).inserted }
+
+        for item in items {
+            let entry = NSMenuItem(title: item.key, action: nil, keyEquivalent: "")
+            let submenu = NSMenu()
+            for face in ["なし"] + faces {
+                let choice = NSMenuItem(title: face, action: #selector(assign(_:)), keyEquivalent: "")
+                choice.target = self
+                choice.representedObject = item.key
+                let current = Assignments.table[item.key]
+                choice.state = (face == "なし" ? current == nil : current == face) ? .on : .off
+                submenu.addItem(choice)
+            }
+            entry.submenu = submenu
+            menu.addItem(entry)
+        }
+
+        menu.addItem(.separator())
+        if !CGPreflightScreenCaptureAccess() {
+            menu.addItem(withTitle: "画面収録を許可する（設定を開く）",
+                         action: #selector(openPrivacySettings), keyEquivalent: "")
+        }
+        let sizeEntry = NSMenuItem(title: "絵の大きさ", action: nil, keyEquivalent: "")
+        let sizeMenu = NSMenu()
+        for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
+            let choice = NSMenuItem(title: String(format: "%.0f%%", value * 100),
+                                    action: #selector(setScale(_:)), keyEquivalent: "")
+            choice.target = self
+            choice.representedObject = value
+            choice.state = abs(Double(faceScale) - value) < 0.001 ? .on : .off
+            sizeMenu.addItem(choice)
+        }
+        sizeEntry.submenu = sizeMenu
+        menu.addItem(sizeEntry)
+
+        menu.addItem(withTitle: "絵のフォルダを開く", action: #selector(openFacesFolder), keyEquivalent: "")
+        menu.addItem(withTitle: "設定を読み直す", action: #selector(reload), keyEquivalent: "")
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "終了", action: #selector(quit), keyEquivalent: "q")
+        for entry in menu.items where entry.action != nil {
+            entry.target = self
+        }
+    }
+}
