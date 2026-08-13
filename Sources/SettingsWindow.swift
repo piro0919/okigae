@@ -50,6 +50,12 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         for label in [itemHint, characterHint] {
             label.textColor = .secondaryLabelColor
             label.font = .systemFont(ofSize: 11)
+            // 長い名前で窓が横に伸びないようにする
+            label.lineBreakMode = .byTruncatingTail
+            label.maximumNumberOfLines = 1
+            label.cell?.truncatesLastVisibleLine = true
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            label.translatesAutoresizingMaskIntoConstraints = false
         }
 
         charactersGrid.orientation = .vertical
@@ -68,7 +74,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         size.action = #selector(pickSize(_:))
 
         let insetLabel = NSTextField(labelWithString: "上下の余白")
-        let inset = NSTextField(string: String(Int(UserDefaults.standard.double(forKey: "verticalInset"))))
+        // 空欄なら自動。数値を入れたらそれで上書きする。
+        let manual = UserDefaults.standard.object(forKey: "verticalInset") as? Double
+        let inset = NSTextField(string: manual.map { String(Int($0)) } ?? "")
+        inset.placeholderString = "自動"
         inset.alignment = .right
         inset.target = self
         inset.action = #selector(setInset(_:))
@@ -97,6 +106,18 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         reload()
     }
 
+    /// 案内の行が窓幅を超えないようにする。
+    private func constrainHints(to width: CGFloat) {
+        for label in [itemHint, characterHint] {
+            label.preferredMaxLayoutWidth = width
+            if let existing = label.constraints.first(where: { $0.firstAttribute == .width }) {
+                existing.constant = width
+            } else {
+                label.widthAnchor.constraint(equalToConstant: width).isActive = true
+            }
+        }
+    }
+
     /// 窓の幅は升目から逆算する。中身の大きさに任せると、行が内側の余白を
     /// 上回ったときに右の余白が押し出される。
     private func fitWindow() {
@@ -105,6 +126,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         let gap: CGFloat = 4
         let columns = CGFloat(perRow)
         let width = inset * 2 + columns * cellSide + (columns - 1) * gap
+        constrainHints(to: width - inset * 2)
         window.setContentSize(NSSize(width: width, height: root.fittingSize.height))
     }
 
@@ -310,7 +332,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             let target = base.components(separatedBy: "_").dropFirst().joined(separator: "_")
             name = "\(owner)（\(target.components(separatedBy: ".").last ?? target)）"
         }
-        return number == 0 ? name : "\(name) の \(number + 1) 個目"
+        let shown = name.count > 24 ? name.prefix(24) + "…" : name[...]
+        return number == 0 ? String(shown) : "\(shown) の \(number + 1) 個目"
     }
 
     /// 未割り当ての項目に何を出すか。
@@ -353,9 +376,14 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     /// メニューバーの見た目を変えるアプリと併用するときに使う。
     /// 上下に余白を取ると、そこには背景を敷かないので、帯の形がつながる。
     @objc private func setInset(_ sender: NSTextField) {
-        let value = max(0, min(Double(sender.stringValue) ?? 0, 8))
-        sender.stringValue = String(Int(value))
-        UserDefaults.standard.set(value, forKey: "verticalInset")
+        let text = sender.stringValue.trimmingCharacters(in: .whitespaces)
+        if text.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "verticalInset")
+        } else {
+            let value = max(0, min(Double(text) ?? 0, 8))
+            sender.stringValue = String(Int(value))
+            UserDefaults.standard.set(value, forKey: "verticalInset")
+        }
         onChange?()
     }
 
