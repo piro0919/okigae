@@ -84,7 +84,7 @@ final class OverlayPanel: NSPanel {
         refreshBackdrop(region: item.frame, windowID: item.windowID)
     }
 
-    /// 背景を撮り直す。画面をまたぐと壁紙が変わるので、位置が動いたら撮る。
+    /// 背景を敷き直す。画面をまたぐと壁紙が変わるので、位置が動いたら撮る。
     func refreshBackdrop(region: CGRect, windowID: CGWindowID, force: Bool = false) {
         let aged = CFAbsoluteTimeGetCurrent() - capturedAt > staleAfter
         guard force || region != capturedRegion || aged else { return }

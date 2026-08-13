@@ -41,4 +41,15 @@ enum Backdrop {
         let imageOption = CGWindowImageOption([.bestResolution, .boundsIgnoreFraming]).rawValue
         return createImage(region, listOption, windowID, imageOption)?.takeRetainedValue()
     }
+
+    // 明示した窓だけを合成して撮る。こちらも macOS 15 でコンパイルできない。
+    private typealias CreateImageFromArray = @convention(c) (CGRect, CFArray, UInt32) -> Unmanaged<CGImage>?
+
+    private static let createImageFromArray: CreateImageFromArray? = {
+        guard let handle = dlopen(nil, RTLD_NOW),
+              let symbol = dlsym(handle, "CGWindowListCreateImageFromArray")
+        else { return nil }
+        return unsafeBitCast(symbol, to: CreateImageFromArray.self)
+    }()
+
 }
