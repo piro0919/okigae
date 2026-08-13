@@ -22,6 +22,14 @@ enum Backdrop {
     /// `capture` が空の画像を返すことで表面化する。
     static var isAvailable: Bool { createImage != nil }
 
+    /// 画面に出ているものをそのまま撮る。板の形を測るために使う。
+    static func captureScreen(region: CGRect) -> CGImage? {
+        guard let createImage else { return nil }
+        let listOption = CGWindowListOption.optionOnScreenOnly.rawValue
+        let imageOption = CGWindowImageOption([.bestResolution, .boundsIgnoreFraming]).rawValue
+        return createImage(region, listOption, kCGNullWindowID, imageOption)?.takeRetainedValue()
+    }
+
     /// - Parameters:
     ///   - region: CoreGraphics 座標の矩形。
     ///   - windowID: この項目より下にあるものだけを撮る。

@@ -125,6 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 権限が無いときは何も置かない。メニューに「画面収録を許可…」が出る
         guard hasPermission() else { return }
         let items = StatusItems.resolved().filter { !$0.key.isEmpty }
+        if BarShape.isStale { BarShape.measure(items: StatusItems.resolved()) }
         var alive = Set<String>()
 
         for item in items {

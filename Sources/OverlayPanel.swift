@@ -62,7 +62,7 @@ final class OverlayPanel: NSPanel {
         // 上下に余白を取ると、その分だけ背景を敷かない。
         // メニューバーの見た目を変えるアプリが帯の上下を詰めている場合、
         // そこを透過のままにすると帯の形がつながる。
-        let inset = CGFloat(UserDefaults.standard.double(forKey: "verticalInset"))
+        let inset = BarShape.effective
         let box = content.bounds.insetBy(dx: 0, dy: min(inset, content.bounds.height / 2 - 1))
         backdropView.frame = box
         backdropView.imageScaling = .scaleAxesIndependently
@@ -96,7 +96,7 @@ final class OverlayPanel: NSPanel {
         guard force || region != capturedRegion || aged else { return }
         // 板を隠す必要はない。撮る対象は項目より下にあるものだけで、
         // 板は項目より前面にあるため写り込まない。隠すと一瞬だけ本物が見えてちらつく。
-        let inset = CGFloat(UserDefaults.standard.double(forKey: "verticalInset"))
+        let inset = BarShape.effective
         let target = region.insetBy(dx: 0, dy: min(inset, region.height / 2 - 1))
         guard let captured = Backdrop.capture(region: target, below: windowID) else { return }
         backdropView.image = NSImage(cgImage: captured, size: backdropView.bounds.size)
