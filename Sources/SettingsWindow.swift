@@ -16,6 +16,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private var onChange: (() -> Void)?
     private var items: [StatusItem] = []
     private var selectedKey: String?
+    private var insetField: NSTextField?
 
     private let cellSide: CGFloat = 46
     /// 折り返す個数。上段と下段で列を揃える
@@ -66,10 +67,19 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         size.target = self
         size.action = #selector(pickSize(_:))
 
+        let insetLabel = NSTextField(labelWithString: "上下の余白")
+        let inset = NSTextField(string: String(Int(UserDefaults.standard.double(forKey: "verticalInset"))))
+        inset.alignment = .right
+        inset.target = self
+        inset.action = #selector(setInset(_:))
+        inset.translatesAutoresizingMaskIntoConstraints = false
+        inset.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        insetField = inset
+
         let openFolder = NSButton(title: "フォルダを開く", target: self, action: #selector(openCharactersFolder))
         let refresh = NSButton(title: "更新", target: self, action: #selector(reload))
 
-        let footer = NSStackView(views: [sizeLabel, size, openFolder, refresh])
+        let footer = NSStackView(views: [sizeLabel, size, insetLabel, inset, openFolder, refresh])
         footer.orientation = .horizontal
         footer.spacing = 8
 
@@ -337,6 +347,15 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     @objc private func pickSize(_ sender: NSPopUpButton) {
         guard let value = sender.selectedItem?.representedObject as? Double else { return }
         UserDefaults.standard.set(value, forKey: "faceScale")
+        onChange?()
+    }
+
+    /// メニューバーの見た目を変えるアプリと併用するときに使う。
+    /// 上下に余白を取ると、そこには背景を敷かないので、帯の形がつながる。
+    @objc private func setInset(_ sender: NSTextField) {
+        let value = max(0, min(Double(sender.stringValue) ?? 0, 8))
+        sender.stringValue = String(Int(value))
+        UserDefaults.standard.set(value, forKey: "verticalInset")
         onChange?()
     }
 
