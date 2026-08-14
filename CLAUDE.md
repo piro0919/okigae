@@ -66,6 +66,26 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
 - Sparkle ships Japanese but shows English unless `CFBundleDevelopmentRegion` and
   `CFBundleLocalizations` are declared.
 
+## Gather what you can before asking
+
+Every request costs the other person a turn. If two requests have not resolved something, find
+a way to read it directly before asking a third time.
+
+- `Tools/probe/` samples the resolved status items 20 times and prints every distinct reading,
+  which is how to tell a wrong key from an unstable one. It is not wired into `build.sh`;
+  compile it against the sources:
+
+  ```bash
+  swiftc -target arm64-apple-macos14.0 -framework AppKit \
+    Sources/StatusItems.swift Tools/probe/main.swift -o /tmp/okigae-probe && /tmp/okigae-probe
+  ```
+
+- `screencapture -x -R<x,y,w,h> /tmp/bar.png` reads the menu bar back without asking anyone to
+  describe it. Overlay alignment is a pixel question and should be settled from a picture.
+
+The sources emit no log lines at all, so there is nothing to read with `log show`. Add a
+`Logger` before reaching for one.
+
 ## Where things live
 
 - Settings and characters: `~/Library/Application Support/Okigae/`
