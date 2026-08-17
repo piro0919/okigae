@@ -166,7 +166,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         itemStrip.arrangedSubviews.forEach { $0.removeFromSuperview() }
         var cells: [NSView] = []
         for item in items {
-            let assigned = Assignments.image(for: item.key)
+            let assigned = Assignments.image(for: item.key, aliases: item.aliases)
             let cell = Cell(image: assigned ?? originalIcon(of: item),
                             side: cellSide,
                             selected: item.key == selectedKey,
@@ -199,9 +199,16 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         }
     }
 
+    /// いま選んでいる項目。別の画面での鍵も要るので、鍵だけでなく項目ごと持つ。
+    private var selectedItem: StatusItem? {
+        items.first { $0.key == selectedKey }
+    }
+
     private func rebuildCharacters() {
         charactersGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let current = selectedKey.flatMap { Assignments.table[$0] }
+        let current = selectedItem.flatMap {
+            Assignments.character(for: $0.key, aliases: $0.aliases)
+        }
         // 項目を選ぶまでは当てる先が無い。薄くして、押しても何も起きないようにする。
         charactersGrid.alphaValue = selectedKey == nil ? 0.35 : 1
 
@@ -222,9 +229,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
                 .appendingPathComponent("\(character).png"))
             let cell = Cell(image: image, side: cellSide,
                             selected: hasTarget && current == character, dimmed: false)
-            cell.toolTip = character
+            let name = Assignments.displayName(for: character)
+            cell.toolTip = name
             cell.onHover = { [weak self] inside in
-                self?.characterHint.stringValue = inside ? character : self?.characterHintText() ?? ""
+                self?.characterHint.stringValue = inside ? name : self?.characterHintText() ?? ""
             }
             cell.onClick = { [weak self] in self?.assign(character) }
             cells.append(cell)
@@ -246,8 +254,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     }
 
     private func characterHintText() -> String {
-        guard let key = selectedKey else { return " " }
-        return Assignments.table[key].map { "いまは \($0)" } ?? "いまは なし"
+        guard let item = selectedItem else { return " " }
+        return Assignments.character(for: item.key, aliases: item.aliases)
+            .map { "いまは \(Assignments.displayName(for: $0))" } ?? "いまは なし"
     }
 
     private func updateHint() {
@@ -257,8 +266,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     private func assign(_ character: String?) {
         // 当てる先が無いうちは何もしない。見た目でも薄くしてある。
-        guard let key = selectedKey else { return }
-        Assignments.set(character: character, for: key)
+        guard let item = selectedItem else { return }
+        Assignments.set(character: character, for: item.key, aliases: item.aliases)
         onChange?()
         rebuildStrip()
         rebuildCharacters()

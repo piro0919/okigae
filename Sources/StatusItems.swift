@@ -8,6 +8,12 @@ struct StatusItem {
     let key: String
     /// CoreGraphics 座標。原点は主ディスプレイの左上。
     let frame: CGRect
+    /// 同じ項目が別の画面で名乗る鍵。
+    ///
+    /// 同じ Doll の項目が、ある画面では `com.xiaogd.Doll#0`、別の画面では
+    /// `Doll_com.hnc.Discord#0` を名乗る。片方で当てた顔をもう片方でも出すために、
+    /// 引き当てるときはこちらも見る。並びが一致しない画面の間では空になる。
+    var aliases: [String] = []
 }
 
 enum StatusItems {
@@ -114,7 +120,7 @@ enum StatusItems {
 
         // 同じアプリが複数の項目を持つので、通し番号を足して鍵にする。
         // 番号はウィンドウ ID の昇順、つまりアプリが項目を作った順。
-        var resolved: [StatusItem] = []
+        var keyed: [[StatusItem]] = []
         for items in lists {
             let titled = items.enumerated().map { index, item in
                 // 自分のタイトルが具体的なら、それを使う。
@@ -130,10 +136,46 @@ enum StatusItems {
                 counters[item.key] = number + 1
                 keyByWindow[item.windowID] = "\(item.key)#\(number)"
             }
-            resolved += titled.map {
+            keyed.append(titled.map {
                 StatusItem(windowID: $0.windowID, key: keyByWindow[$0.windowID] ?? "", frame: $0.frame)
+            })
+        }
+        return withAliases(keyed)
+    }
+
+    /// 画面をまたいで同じ項目どうしを結び、互いの鍵を控えさせる。
+    ///
+    /// 突き合わせるのは右端から数えた位置。時計や電池は端に貼り付いていて動かず、
+    /// 新しく現れる項目は左に積まれるので、右から数えたほうがずれにくい。
+    ///
+    /// ただし位置だけを信じると、画面ごとに項目数が食い違ったときに他人の鍵を
+    /// 静かに配ってしまう。同じ並びである証拠として幅を使い、右端から幅が一致して
+    /// いる間だけ結ぶ。食い違った位置より左は、もう対応が取れないので結ばない。
+    ///
+    /// 項目数の一致までは求められない。自分自身の項目が片方の画面にだけ出ている
+    /// ことがあり、それだけで全部の別名が落ちる。
+    private static func withAliases(_ lists: [[StatusItem]]) -> [StatusItem] {
+        guard lists.count > 1 else { return lists.flatMap { $0 } }
+
+        // 右端から、全画面で幅が揃っている範囲を数える。lists は右端が先頭。
+        var matched = 0
+        while matched < (lists.map(\.count).min() ?? 0) {
+            let widths = lists.map { $0[matched].frame.width }
+            guard widths.allSatisfy({ $0 == widths[0] }) else { break }
+            matched += 1
+        }
+
+        return lists.enumerated().flatMap { listIndex, items in
+            items.enumerated().map { index, item in
+                guard index < matched else { return item }
+                var item = item
+                item.aliases = lists.enumerated().compactMap { otherIndex, other in
+                    guard otherIndex != listIndex else { return nil }
+                    let key = other[index].key
+                    return key.isEmpty || key == item.key ? nil : key
+                }
+                return item
             }
         }
-        return resolved
     }
 }

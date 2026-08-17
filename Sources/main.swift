@@ -130,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for item in items {
             let key = panelKey(for: item)
-            guard let image = Assignments.image(for: item.key) else { continue }
+            guard let image = Assignments.image(for: item.key, aliases: item.aliases) else { continue }
             alive.insert(key)
             if let panel = panels[key] {
                 panel.update(item: item, image: image, scale: faceScale)
