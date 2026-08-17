@@ -141,7 +141,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     @objc private func reload() {
         // 二つの画面の項目が混ざると並び順が壊れる。項目数が最も多い画面を基準にする。
-        let all = StatusItems.resolved().filter { !$0.key.isEmpty && !$0.key.hasPrefix("Item-") }
+        // 名前を持たない項目も並べる。当てられはしないが、黙って消すとバーに
+        // 見えている数と合わず、探しているものが無いのか壊れているのか分からない。
+        let all = StatusItems.resolved().filter { !$0.key.isEmpty }
         var byDisplay: [CGDirectDisplayID: [StatusItem]] = [:]
         for item in all {
             guard let host = StatusItems.screen(containing: item.frame) else { continue }
@@ -167,20 +169,24 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         var cells: [NSView] = []
         for item in items {
             let assigned = Assignments.image(for: item.key, aliases: item.aliases)
+            let nameless = Self.isNameless(item.key)
             let cell = Cell(image: assigned ?? originalIcon(of: item),
                             side: cellSide,
                             selected: item.key == selectedKey,
                             dimmed: assigned == nil)
-            let name = displayName(for: item.key)
+            let name = nameless ? Self.namelessHint : displayName(for: item.key)
             cell.toolTip = name
             cell.onHover = { [weak self] inside in
                 self?.itemHint.stringValue = inside ? name : self?.itemHintText() ?? ""
             }
-            cell.onClick = { [weak self] in
-                self?.selectedKey = item.key
-                self?.rebuildStrip()
-                self?.rebuildCharacters()
-                self?.updateHint()
+            // 名前を持たない項目は選べない。当てても次の起動では別の項目に付く。
+            if !nameless {
+                cell.onClick = { [weak self] in
+                    self?.selectedKey = item.key
+                    self?.rebuildStrip()
+                    self?.rebuildCharacters()
+                    self?.updateHint()
+                }
             }
             cells.append(cell)
         }
@@ -198,6 +204,14 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             return row
         }
     }
+
+    /// 名乗らない項目。`Item-0` は macOS が付ける仮の名前で、
+    /// どのアプリのものかは分からない。画面が一つしか無いと借りる先も無い。
+    static func isNameless(_ key: String) -> Bool {
+        key.hasPrefix("Item-")
+    }
+
+    static let namelessHint = "名前を名乗らない項目。どのアプリのものか判別できないので当てられません"
 
     /// いま選んでいる項目。別の画面での鍵も要るので、鍵だけでなく項目ごと持つ。
     private var selectedItem: StatusItem? {
