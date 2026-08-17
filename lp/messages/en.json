@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "title": "Okigae — put a face on your menu bar",
+    "description": "A small Mac app that lays artwork of your choosing over the icons in the menu bar. The real items stay alive underneath, so clicking still opens their own menus."
+  },
+  "hero": {
+    "tagline": "Put a face on your menu bar",
+    "lead": "The row of icons along the top of the screen turns into a grey blur after a while. Okigae lays a character over the ones you choose. Click it and the app's own menu opens, exactly as before.",
+    "download": "Download (free)",
+    "requirement": "macOS 14 or later, Apple silicon",
+    "shot": "A real menu bar, with nine items given faces"
+  },
+  "compare": {
+    "before": "Before",
+    "after": "Nine items given faces",
+    "note": "The same spot on the same Mac, photographed with Okigae quit and again with it running. Nothing retouched. Items you don't assign are left exactly as they were."
+  },
+  "characters": {
+    "title": "Ten faces come with it",
+    "lead": "Give one to each item you want to pick out. Drop your own PNG into the same folder and it appears alongside them.",
+    "momoka": "Momoka",
+    "ruri": "Ruri",
+    "konoha": "Konoha",
+    "hinata": "Hinata",
+    "akane": "Akane",
+    "sumire": "Sumire",
+    "kuroha": "Kuroha",
+    "yuki": "Yuki",
+    "himari": "Himari",
+    "mio": "Mio"
+  },
+  "features": {
+    "title": "How it behaves",
+    "alive": {
+      "title": "Nothing is actually replaced",
+      "body": "macOS gives no way to reach into another app's menu bar item, so Okigae doesn't try. It lays a transparent panel over the item and lets clicks pass straight through. The real item is still there, still working, and quitting Okigae leaves it exactly as it was."
+    },
+    "blend": {
+      "title": "It sits on your wallpaper, not on a grey box",
+      "body": "The panel's background is a capture of whatever is really drawn behind that item. On a see-through menu bar that's your wallpaper; with Reduce transparency turned on it's the flat colour. Either way it matches, because it is the real thing."
+    },
+    "assign": {
+      "title": "Pick an item, then pick a face",
+      "body": "The settings window shows every item in your menu bar in one grid and every character in another. Click one, click the other, and it takes effect straight away. Items you leave alone stay exactly as they are."
+    },
+    "own": {
+      "title": "Bring your own artwork",
+      "body": "The bundled faces are just PNG files in a folder. Put your own square, transparent PNG beside them and it turns up in the grid with the rest. How the bundled ones were drawn is written down in the repository."
+    }
+  },
+  "install": {
+    "title": "Two things to allow on the first run",
+    "body": "Okigae isn't registered with Apple, so the first launch needs a right-click and Open instead of a double-click. It also needs screen recording access — not only to capture the wallpaper behind an item, but to tell the items apart at all. Without it, macOS returns no window titles and nothing can be identified.",
+    "cta": "Download (free)"
+  },
+  "footer": {
+    "source": "Source",
+    "releases": "Releases"
+  },
+  "language": {
+    "ja": "日本語",
+    "en": "English"
+  }
+}

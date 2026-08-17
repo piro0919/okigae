@@ -3,3 +3,4 @@ Okigae.app/
 build/
 Vendor/
 dist/
+node_modules/

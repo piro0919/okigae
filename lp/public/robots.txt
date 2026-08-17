@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://okigae.kkweb.io
+
+# Sitemaps
+Sitemap: https://okigae.kkweb.io/sitemap.xml

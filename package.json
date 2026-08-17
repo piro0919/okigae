@@ -1,0 +1,8 @@
+{
+  "name": "okigae",
+  "private": true,
+  "scripts": {
+    "lp:dev": "pnpm --filter okigae-lp dev",
+    "lp:build": "pnpm --filter okigae-lp build"
+  }
+}

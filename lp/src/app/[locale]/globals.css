@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  /* アイコンの下地と帽子から取った色。輪郭の茶色を文字色に使う */
+  --color-cream: #faf4e4;
+  --color-cream-deep: #f0e5c9;
+  --color-ink: #3d2a19;
+  --color-yellow: #f5cf3d;
+  --color-yellow-deep: #c9971a;
+  --color-yellow-soft: #fdeeb4;
+  /* メニューバーの色。撮った絵と地続きに見せるための背景に使う */
+  --color-bar: #232323;
+  --color-bar-deep: #161616;
+  /* 撮影時の壁紙の青。絵の周りに置くと切り抜き感が消える */
+  --color-wall: #5b7f99;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+}
