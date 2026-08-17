@@ -20,11 +20,54 @@ enum Assignments {
 
     private static var cache: [String: NSImage] = [:]
 
+    /// 同梱キャラクターの、色で呼んでいたころの名前と今の名前。
+    ///
+    /// ファイル名がそのまま鍵であり、画面に出る名前でもある。名前を変えるということは
+    /// ファイルを改名することで、配った先の `assignments.json` には古い名前が
+    /// 書かれたまま残る。読み込みのたびに一度だけ突き合わせて直す。
+    private static let renamed: [String: String] = [
+        "pink": "momoka", "blue": "ruri", "green": "konoha", "orange": "hinata",
+        "red": "akane", "purple": "sumire", "black": "kuroha", "silver": "yuki",
+    ]
+
+    /// 同梱キャラクターの読み。ファイル名はローマ字だが、画面にはかなで出す。
+    /// ここに無い名前 — 利用者が自分で置いた絵 — はファイル名のまま出す。
+    private static let readings: [String: String] = [
+        "momoka": "ももか", "ruri": "るり", "konoha": "このは", "hinata": "ひなた",
+        "akane": "あかね", "sumire": "すみれ", "kuroha": "くろは", "yuki": "ゆき",
+        "himari": "ひまり",
+        "mio": "みお",
+    ]
+
+    /// 升目に出す名前。
+    static func displayName(for character: String) -> String {
+        readings[character] ?? character
+    }
+
     static func prepareDirectories() {
         for directory in [supportDirectory, charactersDirectory] {
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
         migrateFacesFolder()
+        migrateCharacterNames()
+    }
+
+    /// 色の名前で置かれた絵を、新しい名前へ改名する。
+    ///
+    /// 同梱の絵を差し替えて使っている人がいるので、消して置き直すのではなく動かす。
+    /// 新しい名前が既にあるなら触らない。利用者が同じ名前の絵を置いている場合に、
+    /// それを上書きしてしまう。
+    ///
+    /// `installBundledCharacters` より先に走る必要がある。後だと新しい名前の絵が
+    /// 先に置かれ、改名が飛ばされて、古い名前の絵が一覧に残り続ける。
+    private static func migrateCharacterNames() {
+        let manager = FileManager.default
+        for (old, new) in renamed {
+            let from = charactersDirectory.appendingPathComponent("\(old).png")
+            let to = charactersDirectory.appendingPathComponent("\(new).png")
+            guard manager.fileExists(atPath: from.path), !manager.fileExists(atPath: to.path) else { continue }
+            try? manager.moveItem(at: from, to: to)
+        }
     }
 
     /// 以前は Faces という名前だった。見つけたら中身を移す。
@@ -67,7 +110,16 @@ enum Assignments {
             table = [:]
             return
         }
-        table = parsed
+        // 古い名前で書かれた割り当ては、絵が改名済みなら行き先を失っている。
+        let repaired = parsed.mapValues { value -> String in
+            guard let new = renamed[value],
+                  FileManager.default.fileExists(
+                      atPath: charactersDirectory.appendingPathComponent("\(new).png").path)
+            else { return value }
+            return new
+        }
+        table = repaired
+        if repaired != parsed { save() }
     }
 
     static func save() {
@@ -78,14 +130,38 @@ enum Assignments {
         try? data.write(to: file)
     }
 
-    static func set(character: String?, for key: String) {
-        table[key] = character
+    /// 割り当てる。別の画面で同じ項目が名乗る鍵にも同じ値を書く。
+    ///
+    /// 書き分けると、画面ごとに違う顔が出る状態を作れてしまう。同じ項目である以上
+    /// 一つの答えしか無いので、まとめて同じ値にする。
+    static func set(character: String?, for key: String, aliases: [String] = []) {
+        for target in [key] + aliases {
+            table[target] = character
+        }
         save()
+    }
+
+    /// 項目に対応するキャラクター。自分の鍵で見つからなければ、
+    /// 同じ項目が別の画面で名乗る鍵も見る。
+    static func character(for key: String, aliases: [String]) -> String? {
+        for candidate in [key] + aliases {
+            if let name = table[candidate] { return name }
+        }
+        return nil
+    }
+
+    static func image(for key: String, aliases: [String]) -> NSImage? {
+        guard let name = character(for: key, aliases: aliases) else { return nil }
+        return image(named: name)
     }
 
     /// 鍵に対応するキャラクター。無ければ nil。
     static func image(for key: String) -> NSImage? {
         guard let name = table[key] else { return nil }
+        return image(named: name)
+    }
+
+    private static func image(named name: String) -> NSImage? {
         if let cached = cache[name] { return cached }
         let url = charactersDirectory.appendingPathComponent("\(name).png")
         guard let image = NSImage(contentsOf: url) else { return nil }
