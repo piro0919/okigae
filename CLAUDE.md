@@ -13,7 +13,7 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
 | `Sources/StatusItems.swift` | Finds menu bar items and works out a stable key for each |
 | `Sources/Backdrop.swift` | Captures what sits behind an item |
 | `Sources/BarShape.swift` | Measures how tall the bar actually is, for apps that reshape it |
-| `Sources/OverlayPanel.swift` | One panel per item: backdrop underneath, character on top |
+| `Sources/OverlayPanel.swift` | Two panels per item: the backdrop, and the face a level above |
 | `Sources/Assignments.swift` | `assignments.json`, the bundled characters, first-run copy |
 | `Sources/SettingsWindow.swift` | Grid of items, grid of characters, click one then the other |
 | `Sources/Updater.swift` | Sparkle. Checks once at launch, speaks only when there's an update |
@@ -38,9 +38,9 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
   ordinal follows window ID order, which is the order the app created its items in; verified
   by restarting Doll and watching Discord/Slack/Linear keep their positions.
 - **A display's own title wins.** Titles differ per display: a position carrying a bundle
-  identifier on one screen may be `Item-0` on another. Borrowing across displays by
-  right-edge order breaks as soon as the two lists differ in length, and quietly hands an
-  item somebody else's name. Borrow only when the item's own title is empty or generic.
+  identifier on one screen may be `Item-0` on another. Borrow a better one only when the
+  item's own title is empty or generic — the other display's name is evidence, not truth.
+  What to do when both displays have a real name but they disagree is the aliases below.
 - **Deduplicate by position, keeping the better title.** Some apps keep two windows per item
   and swap which one is on screen every few seconds. Keying panels by window ID made them
   rebuild on every swap, which is what the flicker was. Keeping the front-most window lost
@@ -66,6 +66,19 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
   disagreement. Requiring the *whole* sequence to match looks safer and is useless — Okigae's
   own item shows on one display and not the other often enough that every alias silently
   vanishes, which reads as "some faces don't appear on the other screen".
+- **Items that never name themselves are shown, not hidden.** Every status item window is
+  owned by Control Center, so the owning process says `com.apple.controlcenter` for all of
+  them and the window title is the only thing that separates one from another. An item that
+  answers `Item-0` on every display cannot be told from any other, and keying it by position
+  would hand the face to a different item the moment anything else in the bar appears or
+  leaves. So they stay unassignable — but they appear in the settings grid, dimmed, with the
+  reason on hover. Dropping them silently left the grid short of what the bar plainly shows.
+- **The backdrop and the face are separate windows.** Item rects tile the bar with no gaps,
+  so a face wider than its item overlaps a neighbour, and with one window per item whichever
+  backdrop happened to be created later would cover it. The face sits one level above every
+  backdrop instead. This is what makes the size setting mean anything: at 100% nothing
+  changes, and above it the face grows sideways into its neighbours — never taller than the
+  bar, because the alternative is a chin resting on the desktop.
 - **A character's file name is its identity.** It is the value in `assignments.json`, and
   it is what the settings window shows — for artwork the user dropped in as much as for the
   bundled eight. So naming a character means renaming a file, which reaches into folders
@@ -128,5 +141,5 @@ The sources emit no log lines at all, so there is nothing to read with `log show
 
 ## Open
 
-- Items that only ever report `Item-0` cannot be identified, so they are left out.
-- An item's width becomes the character's size, so narrow items get small faces.
+- The landing page has no home yet; `okigae.kkweb.io` is written into the sitemap and
+  nothing is pointed at it.

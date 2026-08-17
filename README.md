@@ -112,5 +112,9 @@ losing the ability to update copies already out there.
 
 - `CGWindowListCreateImage` no longer compiles on macOS 15 and is reached through
   `dlsym`. The symbol is still there, but Apple may remove it.
-- On a display that only ever reports `Item-0`, used on its own, items cannot be identified.
-- An item's width becomes the artwork's size, so narrow items get small faces.
+- An item that answers `Item-0` on every display cannot be identified. Every status item
+  window belongs to Control Center, so there is nothing behind the title to fall back on.
+  Such items appear in the settings window dimmed, and cannot be assigned.
+- An item's width caps the artwork, since item rects tile the bar with nothing between them.
+  Raising the size setting grows the artwork sideways over its neighbours, up to the height
+  of the bar.
