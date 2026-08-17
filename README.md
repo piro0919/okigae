@@ -43,9 +43,9 @@ The key is the item's window title plus an ordinal.
 
 ```json
 {
-  "io.kkweb.konechi#0": "pink",
-  "Doll_com.hnc.Discord#0": "orange",
-  "Battery#0": "blue"
+  "io.kkweb.konechi#0": "momoka",
+  "Doll_com.hnc.Discord#0": "hinata",
+  "Battery#0": "ruri"
 }
 ```
 
@@ -55,8 +55,11 @@ per app it watches. Hence the ordinal, assigned in window ID order, which is the
 the app created its items in.
 
 Displays disagree about titles. A position that carries a bundle identifier on one
-screen may be empty or a bare `Item-0` on another. Order from the right edge and item
-widths do match across displays, so the lists are lined up and the more specific title wins.
+screen may be empty, a bare `Item-0`, or a different name entirely on another — and which
+screen carries which name changes between launches. Item order and widths from the right
+edge do match, so the lists are lined up that way: the more specific title wins, and each
+item also remembers the keys its twins use on the other screens. Assign a face on one
+display and it appears on all of them.
 
 ## Build
 
@@ -71,13 +74,29 @@ keeps it.
 
 ## Characters
 
-How it is generated, and what eight attempts taught us, is in [docs/characters.md](docs/characters.md).
+Ten come with the app: momoka, ruri, konoha, hinata, akane, sumire, kuroha, yuki, himari
+and mio.
+The file name is the name — it is what the settings window shows and what
+`assignments.json` stores — so anything you drop into the folder is named by whatever you
+call the file. The bundled ones also carry a kana reading for the settings window;
+`Sources/Assignments.swift` holds both tables.
 
-Generated PNGs carry transparent margins, so square them before dropping them in:
+They used to be named after their hair colour. Anything still assigned to `pink` and the
+rest is renamed on the next launch, artwork and `assignments.json` together.
+
+How they are generated, and what the first eight attempts taught us, is in
+[docs/characters.md](docs/characters.md).
+
+To take one in, prompt to artwork in one step:
 
 ```bash
-swift Tools/square.swift <generated.png> ~/Library/Application\ Support/Okigae/Characters/<name>.png
+./Tools/add-character.sh ~/Downloads/generated.png himari ひまり
 ```
+
+It squares the artwork, files it under `Resources/Characters/`, adds the reading, adds it
+to the landing page in both languages, and writes `docs/preview-<name>.png` — the face at
+its real menu bar size over a dark bar and a light wallpaper, which is where a pale
+outline gives itself away.
 
 ## Releasing
 

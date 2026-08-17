@@ -17,6 +17,8 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
 | `Sources/Assignments.swift` | `assignments.json`, the bundled characters, first-run copy |
 | `Sources/SettingsWindow.swift` | Grid of items, grid of characters, click one then the other |
 | `Sources/Updater.swift` | Sparkle. Checks once at launch, speaks only when there's an update |
+| `lp/` | The landing page. Next.js, English and Japanese, `pnpm lp:dev` and `pnpm lp:build` |
+| `Tools/add-character.sh` | Takes one generated PNG all the way in: squared, named, on the page |
 
 ## Key decisions
 
@@ -43,10 +45,36 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
   and swap which one is on screen every few seconds. Keying panels by window ID made them
   rebuild on every swap, which is what the flicker was. Keeping the front-most window lost
   names, because the front one is sometimes the untitled twin.
-- **The bar's height is measured, not assumed.** Ice and friends draw a rounded bar that sits
-  a few points inside the real one, so a panel covering the item's full rect cuts a notch out
-  of it. `BarShape` reads one column between two items and counts the rows that differ from
-  the middle. Nothing overlaid means no difference means zero.
+- **The bar's height is measured, not assumed, and measured per display.** Ice and friends
+  draw a rounded bar that sits a few points inside the real one, so a panel covering the
+  item's full rect cuts a notch out of it. `BarShape` reads a column at each item's left
+  edge — the padding before the icon starts — counts the rows that differ from the middle,
+  and takes the median so a column landing on artwork cannot decide the answer. Nothing
+  overlaid means no difference means zero.
+  Reading a column *between* two items does not work: Ice packs them so the rects touch, no
+  gap of two points ever exists, and the measurement silently returned zero for everything.
+  The inset differs per display — 4 points on the built-in screen against 1 on an external
+  one — so a single global value notches one screen while fitting the other.
+- **The same item carries a different key on each display, so keys have aliases.** One
+  screen calls Doll's items `com.xiaogd.Doll#0`, the other `Doll_com.hnc.Discord#0`, and
+  which screen gets the richer name flips between launches. Rather than canonicalise — that
+  would strand assignments already written to disk — each item carries the keys its twins
+  use elsewhere. Lookups try them in turn; assigning writes the same value to all of them.
+  Pairing is by position from the right edge, because the clock and the battery are pinned
+  there and new items pile up on the left. Widths are the evidence that the pairing is real:
+  pair only while the widths agree, counting from the right, and stop at the first
+  disagreement. Requiring the *whole* sequence to match looks safer and is useless — Okigae's
+  own item shows on one display and not the other often enough that every alias silently
+  vanishes, which reads as "some faces don't appear on the other screen".
+- **A character's file name is its identity.** It is the value in `assignments.json`, and
+  it is what the settings window shows — for artwork the user dropped in as much as for the
+  bundled eight. So naming a character means renaming a file, which reaches into folders
+  already out in the world. `Assignments` renames the artwork and repairs `assignments.json`
+  on load, and the rename must run before the bundled copies are installed; the other order
+  leaves both names in the grid. The kana readings are a display layer over the file names,
+  and only the bundled eight have one.
+- **Names avoid colours.** They were `pink` and `blue` once. Two characters will eventually
+  share a colour, and a recoloured variant of an existing character has nowhere to go.
 - **Development builds are signed with a self-signed certificate.** Ad-hoc signing changes on
   every build, so macOS treats each build as a new app and drops the screen recording grant.
   `./Tools/make-cert.sh` once, and the grant survives. Releases go out ad-hoc signed like the
@@ -65,6 +93,12 @@ macOS 14+. No Xcode: `./build.sh` compiles with the Swift from the Command Line 
   `.moveToActiveSpace` brings it to the one the user is looking at.
 - Sparkle ships Japanese but shows English unless `CFBundleDevelopmentRegion` and
   `CFBundleLocalizations` are declared.
+- **Sparkle overwrites the build you are testing.** `build.sh` stamps `0.0.0` unless
+  `OKIGAE_VERSION` says otherwise, so the check at launch finds the released version, and
+  minutes later `Okigae.app` is the ad-hoc signed release again — screen recording grant
+  gone, no overlays, and the certificate you just signed with nowhere in sight. It looks
+  exactly like a bug in the code you were editing. Build with `OKIGAE_VERSION=99.0.0
+  ./build.sh` while working, and check `codesign -dv` before believing what you see.
 
 ## Gather what you can before asking
 
@@ -94,7 +128,5 @@ The sources emit no log lines at all, so there is nothing to read with `log show
 
 ## Open
 
-- The silver character's outline is too pale to read at menu bar size; worth redrawing.
-- Bundled characters are named after their colour. They could have real names.
 - Items that only ever report `Item-0` cannot be identified, so they are left out.
 - An item's width becomes the character's size, so narrow items get small faces.
