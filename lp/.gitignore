@@ -37,3 +37,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# next-sitemap の生成物。ビルドのたびに日付が変わる
+/public/sitemap.xml
+/public/sitemap-*.xml
+/public/robots.txt
