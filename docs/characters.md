@@ -62,9 +62,20 @@ you have to go on.
 | Purple | Short braids on both sides | Sleepy, eyes half closed |
 | Orange | Short, flicked ends | Smug little grin |
 | Black | High twintails | Startled, mouth open |
-| Silver | Long waves | Composed, mouth closed |
+| Silver | Loose waves, above the shoulder | Composed, looking straight out |
+| Yellow | Ponytail, bangs swept aside | Laughing with an open mouth |
+| Teal | Bob | Pleased with itself, looking sideways |
 
-Silver's outline is too weak; it is the one worth redrawing.
+Silver was redrawn. The first attempt put a pale grey outline around near-white hair,
+which left nothing to see at menu bar size — a white smudge on a dark bar, and gone
+entirely on a light wallpaper. Two changes fixed it: name the outline colour outright
+(`濃い青灰色`) instead of asking for something darker than the hair, and pull the hair
+itself off white towards grey. Say what the outline is for, too — "so it does not
+disappear on a light background" — because the model holds a stated purpose better
+than a stated shade.
+
+This is the one place worth departing from the fixed prompt above. Everything else in
+it stays put.
 
 ## Installing
 
