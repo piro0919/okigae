@@ -62,7 +62,7 @@ final class OverlayPanel: NSPanel {
         // 上下に余白を取ると、その分だけ背景を敷かない。
         // メニューバーの見た目を変えるアプリが帯の上下を詰めている場合、
         // そこを透過のままにすると帯の形がつながる。
-        let inset = BarShape.effective
+        let inset = BarShape.effective(for: OverlayPanel.display(of: item.frame))
         let box = content.bounds.insetBy(dx: 0, dy: min(inset, content.bounds.height / 2 - 1))
         backdropView.frame = box
         backdropView.imageScaling = .scaleAxesIndependently
@@ -90,13 +90,18 @@ final class OverlayPanel: NSPanel {
         refreshBackdrop(region: item.frame, windowID: item.windowID)
     }
 
+    /// その矩形が乗っている画面。余白は画面ごとに違うので、板ごとに引く。
+    private static func display(of frame: CGRect) -> CGDirectDisplayID {
+        StatusItems.screen(containing: frame).map(StatusItems.displayID) ?? 0
+    }
+
     /// 背景を敷き直す。画面をまたぐと壁紙が変わるので、位置が動いたら撮る。
     func refreshBackdrop(region: CGRect, windowID: CGWindowID, force: Bool = false) {
         let aged = CFAbsoluteTimeGetCurrent() - capturedAt > staleAfter
         guard force || region != capturedRegion || aged else { return }
         // 板を隠す必要はない。撮る対象は項目より下にあるものだけで、
         // 板は項目より前面にあるため写り込まない。隠すと一瞬だけ本物が見えてちらつく。
-        let inset = BarShape.effective
+        let inset = BarShape.effective(for: OverlayPanel.display(of: region))
         let target = region.insetBy(dx: 0, dy: min(inset, region.height / 2 - 1))
         guard let captured = Backdrop.capture(region: target, below: windowID) else { return }
         backdropView.image = NSImage(cgImage: captured, size: backdropView.bounds.size)

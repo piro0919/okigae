@@ -4,11 +4,14 @@ import AppKit
 ///
 /// Ice のようにメニューバーの見た目を変えるアプリは、角の丸い帯を描いて
 /// 上下を少し詰める。板が項目の矩形をそのまま覆うと、その差が切れ目に見える。
-/// 項目が無い列を一本撮って、帯が始まる位置と終わる位置を読み取れば、
-/// 板の上下に取るべき余白が決まる。何も重なっていなければ 0 になる。
+/// 縦一列を読んで、帯が始まる位置と終わる位置を数えれば、板の上下に取るべき
+/// 余白が決まる。何も重なっていなければ 0 になる。
+///
+/// 余白は画面ごとに違う。内蔵ディスプレイのメニューバーは外付けより高く、
+/// 帯を描くアプリが詰める量もそれに応じて変わる。
 enum BarShape {
-    /// 上下に取る余白。ポイント。
-    private(set) static var inset: CGFloat = 0
+    /// 画面ごとの余白。ポイント。
+    private(set) static var insets: [CGDirectDisplayID: CGFloat] = [:]
 
     private static var measuredAt: CFAbsoluteTime = 0
     private static let interval: CFAbsoluteTime = 15
@@ -16,37 +19,50 @@ enum BarShape {
     static var isStale: Bool { CFAbsoluteTimeGetCurrent() - measuredAt > interval }
 
     /// 手で入れた値があればそれを使う。無ければ測った値。
-    static var effective: CGFloat {
+    static func effective(for display: CGDirectDisplayID) -> CGFloat {
         if let manual = UserDefaults.standard.object(forKey: "verticalInset") as? Double {
             return CGFloat(manual)
         }
-        return inset
+        return insets[display] ?? 0
     }
 
-    /// 項目の間の隙間を一つ選び、そこの縦一列を読む。
+    /// 画面ごとに、項目の並びに沿って何本か読み、中央値を採る。
+    ///
+    /// 項目と項目の間には隙間が無い。Ice は項目を詰めて並べるので、
+    /// 空いた列を探しても見つからない。代わりに各項目の左端を読む。
+    /// 絵が始まる前の余白にあたるので、たいていは帯の地の色が出る。
+    /// それでも絵に当たることはあるため、何本か読んで中央値を採る。
     static func measure(items: [StatusItem]) {
         measuredAt = CFAbsoluteTimeGetCurrent()
-        guard let screen = NSScreen.main else { return }
+        var measured: [CGDirectDisplayID: CGFloat] = [:]
 
-        let bounds = CGDisplayBounds(StatusItems.displayID(of: screen))
-        let onScreen = items.filter { bounds.intersects($0.frame) }.sorted { $0.frame.minX < $1.frame.minX }
-        guard let height = onScreen.first?.frame.height, height > 8 else { return }
+        for screen in NSScreen.screens {
+            let display = StatusItems.displayID(of: screen)
+            let bounds = CGDisplayBounds(display)
+            let onScreen = items.filter { bounds.intersects($0.frame) }
+                .sorted { $0.frame.minX < $1.frame.minX }
+            guard let height = onScreen.first?.frame.height, height > 8 else { continue }
 
-        // 項目と項目の間で、幅が 2 ポイント以上ある隙間を探す
-        var gapX: CGFloat?
-        for (left, right) in zip(onScreen, onScreen.dropFirst()) where right.frame.minX - left.frame.maxX >= 2 {
-            gapX = (left.frame.maxX + right.frame.minX) / 2
-            break
+            let readings = onScreen
+                .compactMap { read(column: $0.frame.minX + 1, top: bounds.minY, height: height) }
+                .sorted()
+            guard !readings.isEmpty else { continue }
+            measured[display] = readings[readings.count / 2]
         }
-        guard let x = gapX else { return }
 
-        let column = CGRect(x: x, y: bounds.minY, width: 1, height: height)
-        guard let image = Backdrop.captureScreen(region: column) else { return }
+        insets = measured
+    }
+
+    /// 一列読んで、上下それぞれ帯と違う色が続く分を数える。測れなければ nil。
+    private static func read(column x: CGFloat, top: CGFloat, height: CGFloat) -> CGFloat? {
+        let region = CGRect(x: x, y: top, width: 1, height: height)
+        guard let image = Backdrop.captureScreen(region: region) else { return nil }
         let bitmap = NSBitmapImageRep(cgImage: image)
-        guard bitmap.pixelsHigh > 4 else { return }
+        guard bitmap.pixelsHigh > 4 else { return nil }
 
         let scale = CGFloat(bitmap.pixelsHigh) / height
-        guard let middle = bitmap.colorAt(x: 0, y: bitmap.pixelsHigh / 2)?.usingColorSpace(.sRGB) else { return }
+        guard let middle = bitmap.colorAt(x: 0, y: bitmap.pixelsHigh / 2)?.usingColorSpace(.sRGB)
+        else { return nil }
 
         func differs(_ y: Int) -> Bool {
             guard let color = bitmap.colorAt(x: 0, y: y)?.usingColorSpace(.sRGB) else { return false }
@@ -56,14 +72,13 @@ enum BarShape {
             return distance > 0.12
         }
 
-        // 上端から、帯の色と違う行が続く分を数える
         var top = 0
         while top < bitmap.pixelsHigh / 2, differs(top) { top += 1 }
         var bottom = 0
         while bottom < bitmap.pixelsHigh / 2, differs(bitmap.pixelsHigh - 1 - bottom) { bottom += 1 }
 
-        let measured = CGFloat(max(top, bottom)) / scale
+        let inset = CGFloat(max(top, bottom)) / scale
         // 極端な値は測り損ねとみなす
-        inset = measured < height / 3 ? measured.rounded() : 0
+        return inset < height / 3 ? inset.rounded() : 0
     }
 }
