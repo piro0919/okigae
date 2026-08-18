@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { M_PLUS_Rounded_1c } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -62,6 +63,7 @@ export default async function Layout({ children, params }: LayoutProps) {
     <html className={rounded.variable} lang={locale}>
       <body className="font-[family-name:var(--font-rounded)] antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );
