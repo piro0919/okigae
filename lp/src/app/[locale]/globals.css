@@ -22,4 +22,8 @@ html {
 body {
   background: var(--color-cream);
   color: var(--color-ink);
+
+  /* 日本語を語のまとまりで折り返す。これが無いと見出しが「を、」や
+     「キ／ーボード」で割れる。対応していないブラウザでは従来どおり */
+  word-break: auto-phrase;
 }
