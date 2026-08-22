@@ -55,10 +55,43 @@
   },
   "footer": {
     "source": "Source",
-    "releases": "Releases"
+    "releases": "Releases",
+    "privacy": "Privacy"
   },
   "language": {
     "ja": "日本語",
     "en": "English"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: August 22, 2026",
+    "intro": "Okigae asks for Screen Recording permission, which is a big thing to ask for a menu bar toy, so it's worth being specific about what it actually does with it. Nothing is recorded, nothing is saved, and nothing is sent anywhere.",
+    "sections": [
+      {
+        "title": "What the screen permission is used for",
+        "body": "The menu bar is transparent by default, so your wallpaper shows through it. To make replacement artwork sit on the bar without a visible box around it, Okigae grabs the small rectangle behind each status item and uses it as the backdrop. That grab is the only reason macOS asks for Screen Recording. It covers a strip of the menu bar, not your screen, not your windows, and not your work."
+      },
+      {
+        "title": "Nothing is kept",
+        "body": "Each captured rectangle is used to draw one frame and then discarded. Images are never written to disk, never collected, and never leave your Mac. There is no server behind this app to send them to."
+      },
+      {
+        "title": "Update checks go to GitHub",
+        "body": "Okigae checks for a new version once when it starts, not on a timer. The check fetches a small file from its GitHub Releases page, so GitHub sees the request the way it sees any download, including your IP address. It is a plain file download and carries nothing about you or your Mac."
+      },
+      {
+        "title": "No analytics, ever",
+        "body": "There is no crash reporting, no usage tracking, no unique identifier, and no third-party SDK of any kind in the app."
+      },
+      {
+        "title": "You can check all of this",
+        "body": "Okigae is open source under the MIT license, so none of the above has to be taken on trust. Read the source, or open an issue if something looks wrong."
+      },
+      {
+        "title": "Changes",
+        "body": "If a future version starts doing something new with your data, this page gets updated before that version ships."
+      }
+    ],
+    "back": "Back to Okigae"
   }
 }

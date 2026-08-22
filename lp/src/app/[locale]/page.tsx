@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
+import { Link } from "@/i18n/navigation";
 import { LanguageSwitch } from "./language-switch";
 
 const REPO = "https://github.com/piro0919/okigae";
@@ -163,6 +164,9 @@ export default async function Page({ params }: PageProps) {
           <a className="opacity-60 transition hover:opacity-100" href={`${REPO}/releases`}>
             {t("footer.releases")}
           </a>
+          <Link className="opacity-60 transition hover:opacity-100" href="/privacy">
+            {t("footer.privacy")}
+          </Link>
         </div>
       </footer>
     </>
