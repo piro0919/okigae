@@ -22,6 +22,9 @@ const CHARACTERS = [
 
 const FEATURES = ["alive", "blend", "assign", "own"] as const;
 
+/// ページの上端に並べる顔。メニューバーの右側と同じ並び方にする
+const BAR_FACES = ["momoka", "ruri", "konoha", "hinata", "akane"] as const;
+
 function DownloadButton({
   children,
   tone = "dark",
@@ -68,9 +71,26 @@ export default async function Page({ params }: PageProps) {
       {/* 見出し。ページの上端そのものをメニューバーに見立てる */}
       <header className="bg-[var(--color-bar)] px-6 pt-3 pb-16 text-[var(--color-cream)]">
         <div className="mx-auto max-w-4xl">
+          {/* ページの上端そのものをメニューバーとして扱い、実際に顔を並べる。
+              説明の前に、このアプリが何をするのかがここで一度起きる */}
           <div className="flex items-center justify-between gap-4 pb-14">
             <span className="font-bold text-sm tracking-wide opacity-70">Okigae</span>
-            <LanguageSwitch />
+            <div className="flex items-center gap-3">
+              <ul className="hidden items-center gap-1.5 sm:flex">
+                {BAR_FACES.map((name) => (
+                  <li key={name}>
+                    <Image
+                      alt=""
+                      className="size-6"
+                      height={256}
+                      src={`/${name}.png`}
+                      width={256}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <LanguageSwitch />
+            </div>
           </div>
           <div className="flex flex-col gap-7">
             <h1 className="text-balance font-black text-5xl leading-[1.2] tracking-tight sm:text-6xl">
