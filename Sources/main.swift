@@ -3,6 +3,10 @@ import AppKit
 @main
 enum Okigae {
     static func main() {
+        // 画面を出さずに引き当てだけ確かめる口。直したあとはこれを通す
+        if CommandLine.arguments.contains("--selftest") {
+            exit(SelfTest.run())
+        }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate

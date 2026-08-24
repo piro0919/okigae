@@ -25,14 +25,14 @@ enum Assignments {
     /// ファイル名がそのまま鍵であり、画面に出る名前でもある。名前を変えるということは
     /// ファイルを改名することで、配った先の `assignments.json` には古い名前が
     /// 書かれたまま残る。読み込みのたびに一度だけ突き合わせて直す。
-    private static let renamed: [String: String] = [
+    static let renamed: [String: String] = [
         "pink": "momoka", "blue": "ruri", "green": "konoha", "orange": "hinata",
         "red": "akane", "purple": "sumire", "black": "kuroha", "silver": "yuki",
     ]
 
     /// 同梱キャラクターの読み。ファイル名はローマ字だが、画面にはかなで出す。
     /// ここに無い名前 — 利用者が自分で置いた絵 — はファイル名のまま出す。
-    private static let readings: [String: String] = [
+    static let readings: [String: String] = [
         "momoka": "ももか", "ruri": "るり", "konoha": "このは", "hinata": "ひなた",
         "akane": "あかね", "sumire": "すみれ", "kuroha": "くろは", "yuki": "ゆき",
         "himari": "ひまり",
@@ -144,6 +144,13 @@ enum Assignments {
     /// 項目に対応するキャラクター。自分の鍵で見つからなければ、
     /// 同じ項目が別の画面で名乗る鍵も見る。
     static func character(for key: String, aliases: [String]) -> String? {
+        character(for: key, aliases: aliases, in: table)
+    }
+
+    /// 引き当ての中身。割り当て表を渡せるようにして、保存された表に触らずに
+    /// 確かめられるようにしている。自分の鍵を先に見るので、別名より優先される。
+    static func character(for key: String, aliases: [String],
+                          in table: [String: String]) -> String? {
         for candidate in [key] + aliases {
             if let name = table[candidate] { return name }
         }

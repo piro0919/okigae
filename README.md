@@ -66,6 +66,7 @@ display and it appears on all of them.
 ```bash
 ./Tools/make-cert.sh   # once — creates a self-signed certificate for development
 ./build.sh
+./Okigae.app/Contents/MacOS/Okigae --selftest   # assignment lookup, no windows opened
 ```
 
 Ad-hoc signing changes the signature on every build, which makes macOS treat each build
