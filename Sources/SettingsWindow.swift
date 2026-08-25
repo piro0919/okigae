@@ -23,10 +23,11 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let perRow = 8
 
     convenience init(onChange: @escaping () -> Void) {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 420),
-                              styleMask: [.titled, .closable, .miniaturizable],
-                              backing: .buffered,
-                              defer: false)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 420),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false)
         window.title = "Okigae 設定"
         window.center()
         // 全画面のアプリが手前にあると、常駐アプリの窓は元の Space に開いてしまう。
@@ -165,15 +166,16 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     }
 
     private func rebuildStrip() {
-        itemStrip.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for view in itemStrip.arrangedSubviews { view.removeFromSuperview() }
         var cells: [NSView] = []
         for item in items {
             let assigned = Assignments.image(for: item.key, aliases: item.aliases)
             let nameless = Self.isNameless(item.key)
-            let cell = Cell(image: assigned ?? originalIcon(of: item),
-                            side: cellSide,
-                            selected: item.key == selectedKey,
-                            dimmed: assigned == nil)
+            let cell = Cell(
+                image: assigned ?? originalIcon(of: item),
+                side: cellSide,
+                selected: item.key == selectedKey,
+                dimmed: assigned == nil)
             let name = nameless ? Self.namelessHint : displayName(for: item.key)
             cell.toolTip = name
             cell.onHover = { [weak self] inside in
@@ -219,7 +221,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     }
 
     private func rebuildCharacters() {
-        charactersGrid.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for view in charactersGrid.arrangedSubviews { view.removeFromSuperview() }
         let current = selectedItem.flatMap {
             Assignments.character(for: $0.key, aliases: $0.aliases)
         }
@@ -239,10 +241,12 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         cells.append(none)
 
         for character in Assignments.availableCharacters() {
-            let image = NSImage(contentsOf: Assignments.charactersDirectory
-                .appendingPathComponent("\(character).png"))
-            let cell = Cell(image: image, side: cellSide,
-                            selected: hasTarget && current == character, dimmed: false)
+            let image = NSImage(
+                contentsOf: Assignments.charactersDirectory
+                    .appendingPathComponent("\(character).png"))
+            let cell = Cell(
+                image: image, side: cellSide,
+                selected: hasTarget && current == character, dimmed: false)
             let name = Assignments.displayName(for: character)
             cell.toolTip = name
             cell.onHover = { [weak self] inside in
@@ -315,7 +319,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     /// 見せても伝わらない。
     private func appName(forBundleID id: String) -> String? {
         guard id.contains("."),
-              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
         else { return nil }
         return FileManager.default.displayName(atPath: url.path)
             .replacingOccurrences(of: ".app", with: "")
@@ -347,7 +351,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         let base = parts.first ?? key
         let number = Int(parts.count > 1 ? parts[1] : "0") ?? 0
 
-        var name = Self.systemItems[base]?.name ?? appName(forBundleID: base)
+        var name =
+            Self.systemItems[base]?.name ?? appName(forBundleID: base)
             ?? runningAppName(matching: base)
             ?? base.components(separatedBy: ".").last ?? base
         // `Doll_com.hnc.Discord` のように、何のための項目かが入っている場合
@@ -367,22 +372,26 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private func originalIcon(of item: StatusItem) -> NSImage? {
         let base = item.key.components(separatedBy: "#").first ?? item.key
         if let symbol = Self.systemItems[base]?.symbol,
-           let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
+            let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        {
             return image
         }
         if base.contains("."),
-           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: base) {
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: base)
+        {
             return NSWorkspace.shared.icon(forFile: url.path)
         }
         // `Doll_com.hnc.Discord` のように、対象のバンドル ID が入っている場合
         if let tail = base.components(separatedBy: "_").dropFirst().first,
-           tail.contains("."),
-           let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: tail) {
+            tail.contains("."),
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: tail)
+        {
             return NSWorkspace.shared.icon(forFile: url.path)
         }
         if let name = runningAppName(matching: base),
-           let app = NSWorkspace.shared.runningApplications.first(where: { $0.localizedName == name }),
-           let url = app.bundleURL {
+            let app = NSWorkspace.shared.runningApplications.first(where: { $0.localizedName == name }),
+            let url = app.bundleURL
+        {
             return NSWorkspace.shared.icon(forFile: url.path)
         }
         return NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: nil)
@@ -475,10 +484,12 @@ private final class Cell: NSView {
             let inset = bounds.insetBy(dx: 5, dy: 5)
             let fit = min(inset.width / image.size.width, inset.height / image.size.height)
             let size = NSSize(width: image.size.width * fit, height: image.size.height * fit)
-            image.draw(in: NSRect(x: bounds.midX - size.width / 2,
-                                  y: bounds.midY - size.height / 2,
-                                  width: size.width, height: size.height),
-                       from: .zero, operation: .sourceOver, fraction: dimmed ? 0.45 : 1)
+            image.draw(
+                in: NSRect(
+                    x: bounds.midX - size.width / 2,
+                    y: bounds.midY - size.height / 2,
+                    width: size.width, height: size.height),
+                from: .zero, operation: .sourceOver, fraction: dimmed ? 0.45 : 1)
         } else if let label {
             // 何も無いと他の升目と釣り合わないので、斜線を敷く
             let slash = NSBezierPath()
@@ -494,8 +505,9 @@ private final class Cell: NSView {
             ]
             let text = label as NSString
             let size = text.size(withAttributes: attributes)
-            text.draw(at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2),
-                      withAttributes: attributes)
+            text.draw(
+                at: NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2),
+                withAttributes: attributes)
         }
     }
 
@@ -505,10 +517,12 @@ private final class Cell: NSView {
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        trackingAreas.forEach { removeTrackingArea($0) }
-        addTrackingArea(NSTrackingArea(rect: bounds,
-                                       options: [.mouseEnteredAndExited, .activeInKeyWindow],
-                                       owner: self))
+        for area in trackingAreas { removeTrackingArea(area) }
+        addTrackingArea(
+            NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .activeInKeyWindow],
+                owner: self))
     }
 
     override func mouseEntered(with event: NSEvent) { onHover?(true) }

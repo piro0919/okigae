@@ -54,7 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
-        panels.values.forEach { $0.orderOut(nil) }
+        for panel in panels.values { panel.orderOut(nil) }
     }
 
     // MARK: - 権限
@@ -75,7 +75,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openPrivacySettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") else { return }
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+        else { return }
         NSWorkspace.shared.open(url)
     }
 
@@ -84,7 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let url = Bundle.main.url(forResource: "menu-icon", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
+            let image = NSImage(contentsOf: url)
+        {
             // テンプレート画像にすると、明暗どちらのメニューバーでも macOS が色を合わせる。
             image.isTemplate = true
             image.size = NSSize(width: 18, height: 18)
@@ -98,8 +100,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = item
     }
 
-
-
     @objc private func openSettings() {
         if settingsWindow == nil {
             settingsWindow = SettingsWindow { [weak self] in self?.rebuildAll() }
@@ -111,8 +111,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.checkNow()
     }
 
-
-
     @objc private func quit() {
         NSApp.terminate(nil)
     }
@@ -120,7 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 板の同期
 
     private func rebuildAll() {
-        panels.values.forEach { $0.orderOut(nil) }
+        for panel in panels.values { panel.orderOut(nil) }
         panels.removeAll()
         sync()
     }

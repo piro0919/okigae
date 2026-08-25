@@ -13,7 +13,7 @@ enum Backdrop {
 
     private static let createImage: CreateImage? = {
         guard let handle = dlopen(nil, RTLD_NOW),
-              let symbol = dlsym(handle, "CGWindowListCreateImage")
+            let symbol = dlsym(handle, "CGWindowListCreateImage")
         else { return nil }
         return unsafeBitCast(symbol, to: CreateImage.self)
     }()
@@ -34,14 +34,16 @@ enum Backdrop {
     ///   - region: CoreGraphics 座標の矩形。
     ///   - windowID: この項目より下にあるものだけを撮る。
     static func capture(region: CGRect, below windowID: CGWindowID) -> CGImage? {
-        capture(region: region, windowID: windowID,
-                listOption: CGWindowListOption.optionOnScreenBelowWindow.rawValue)
+        capture(
+            region: region, windowID: windowID,
+            listOption: CGWindowListOption.optionOnScreenBelowWindow.rawValue)
     }
 
     /// その項目そのものを撮る。設定画面で、本来のアイコンを見せるために使う。
     static func capture(region: CGRect, of windowID: CGWindowID) -> CGImage? {
-        capture(region: region, windowID: windowID,
-                listOption: CGWindowListOption.optionIncludingWindow.rawValue)
+        capture(
+            region: region, windowID: windowID,
+            listOption: CGWindowListOption.optionIncludingWindow.rawValue)
     }
 
     private static func capture(region: CGRect, windowID: CGWindowID, listOption: UInt32) -> CGImage? {
@@ -55,7 +57,7 @@ enum Backdrop {
 
     private static let createImageFromArray: CreateImageFromArray? = {
         guard let handle = dlopen(nil, RTLD_NOW),
-              let symbol = dlsym(handle, "CGWindowListCreateImageFromArray")
+            let symbol = dlsym(handle, "CGWindowListCreateImageFromArray")
         else { return nil }
         return unsafeBitCast(symbol, to: CreateImageFromArray.self)
     }()

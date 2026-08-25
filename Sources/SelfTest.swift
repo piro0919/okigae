@@ -13,26 +13,35 @@ enum SelfTest {
         do {
             let table = ["wifi": "momoka", "com.apple.wifi": "ruri"]
 
-            check(Assignments.character(for: "wifi", aliases: [], in: table) == "momoka",
-                  "自分の鍵で見つかる")
-            check(Assignments.character(for: "unknown", aliases: [], in: table) == nil,
-                  "割り当てが無ければ nil")
+            check(
+                Assignments.character(for: "wifi", aliases: [], in: table) == "momoka",
+                "自分の鍵で見つかる")
+            check(
+                Assignments.character(for: "unknown", aliases: [], in: table) == nil,
+                "割り当てが無ければ nil")
 
             // 同じ項目が画面によって別の名前を名乗るので、別名も見に行く
-            check(Assignments.character(for: "unknown", aliases: ["com.apple.wifi"],
-                                        in: table) == "ruri",
-                  "自分の鍵で駄目なら別名を見る")
+            check(
+                Assignments.character(
+                    for: "unknown", aliases: ["com.apple.wifi"],
+                    in: table) == "ruri",
+                "自分の鍵で駄目なら別名を見る")
 
             // 自分の鍵を先に見る。別名が先に当たると、画面ごとに違う絵が出る
-            check(Assignments.character(for: "wifi", aliases: ["com.apple.wifi"],
-                                        in: table) == "momoka",
-                  "自分の鍵が別名より優先される")
+            check(
+                Assignments.character(
+                    for: "wifi", aliases: ["com.apple.wifi"],
+                    in: table) == "momoka",
+                "自分の鍵が別名より優先される")
 
-            check(Assignments.character(for: "x", aliases: ["y", "com.apple.wifi"],
-                                        in: table) == "ruri",
-                  "別名は並べた順に見る")
-            check(Assignments.character(for: "x", aliases: ["y", "z"], in: [:]) == nil,
-                  "表が空なら nil")
+            check(
+                Assignments.character(
+                    for: "x", aliases: ["y", "com.apple.wifi"],
+                    in: table) == "ruri",
+                "別名は並べた順に見る")
+            check(
+                Assignments.character(for: "x", aliases: ["y", "z"], in: [:]) == nil,
+                "表が空なら nil")
         }
 
         // 升目に出す名前
@@ -40,8 +49,9 @@ enum SelfTest {
             check(Assignments.displayName(for: "momoka") == "ももか", "同梱の絵はかなで出す")
 
             // 利用者が自分で置いた絵は、ファイル名がそのまま名前になる
-            check(Assignments.displayName(for: "my-own-face") == "my-own-face",
-                  "読みの無い名前はそのまま出す")
+            check(
+                Assignments.displayName(for: "my-own-face") == "my-own-face",
+                "読みの無い名前はそのまま出す")
         }
 
         // 同梱キャラクターの名前の対応表
@@ -54,8 +64,9 @@ enum SelfTest {
             let stale = Assignments.renamed.keys.filter { Assignments.readings[$0] != nil }
             check(stale.isEmpty, "改名前の名前は読みの表に残っていない")
 
-            check(Set(Assignments.renamed.values).count == Assignments.renamed.count,
-                  "改名先が重なっていない")
+            check(
+                Set(Assignments.renamed.values).count == Assignments.renamed.count,
+                "改名先が重なっていない")
         }
 
         print(failures == 0 ? "全部通りました" : "\(failures) 件こけました")

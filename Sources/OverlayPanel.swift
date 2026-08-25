@@ -16,18 +16,20 @@ final class FaceView: NSView {
         let fit = min(bounds.width / image.size.width, bounds.height / image.size.height)
         let size = NSSize(width: image.size.width * fit, height: image.size.height * fit)
         let origin = NSPoint(x: bounds.midX - size.width / 2, y: bounds.midY - size.height / 2)
-        image.draw(in: NSRect(origin: origin, size: size),
-                   from: .zero, operation: .sourceOver, fraction: 1)
+        image.draw(
+            in: NSRect(origin: origin, size: size),
+            from: .zero, operation: .sourceOver, fraction: 1)
     }
 }
 
 /// メニューバーと同じ層に置く、マウスを通す板。
 private final class PassThroughPanel: NSPanel {
     init(frame: NSRect, level: NSWindow.Level) {
-        super.init(contentRect: frame,
-                   styleMask: [.borderless, .nonactivatingPanel],
-                   backing: .buffered,
-                   defer: false)
+        super.init(
+            contentRect: frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false)
         self.level = level
         backgroundColor = .clear
         isOpaque = false

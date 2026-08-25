@@ -43,7 +43,8 @@ enum BarShape {
                 .sorted { $0.frame.minX < $1.frame.minX }
             guard let height = onScreen.first?.frame.height, height > 8 else { continue }
 
-            let readings = onScreen
+            let readings =
+                onScreen
                 .compactMap { read(column: $0.frame.minX + 1, top: bounds.minY, height: height) }
                 .sorted()
             guard !readings.isEmpty else { continue }
@@ -66,7 +67,8 @@ enum BarShape {
 
         func differs(_ y: Int) -> Bool {
             guard let color = bitmap.colorAt(x: 0, y: y)?.usingColorSpace(.sRGB) else { return false }
-            let distance = abs(color.redComponent - middle.redComponent)
+            let distance =
+                abs(color.redComponent - middle.redComponent)
                 + abs(color.greenComponent - middle.greenComponent)
                 + abs(color.blueComponent - middle.blueComponent)
             return distance > 0.12

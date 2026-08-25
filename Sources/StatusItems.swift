@@ -32,8 +32,9 @@ enum StatusItems {
     static func toAppKit(_ frame: CGRect) -> CGRect {
         guard let host = screen(containing: frame) else { return frame }
         let offsetFromTop = frame.maxY - CGDisplayBounds(displayID(of: host)).minY
-        return CGRect(x: frame.minX, y: host.frame.maxY - offsetFromTop,
-                      width: frame.width, height: frame.height)
+        return CGRect(
+            x: frame.minX, y: host.frame.maxY - offsetFromTop,
+            width: frame.width, height: frame.height)
     }
 
     /// 画面に出ている項目を、タイトルは生のまま拾う。
@@ -44,16 +45,16 @@ enum StatusItems {
 
         return list.compactMap { info in
             guard let layer = info[kCGWindowLayer as String] as? Int, layer == statusLayer,
-                  let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid != myPID,
-                  let windowID = info[kCGWindowNumber as String] as? CGWindowID,
-                  let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
-                  let frame = CGRect(dictionaryRepresentation: bounds as CFDictionary)
+                let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid != myPID,
+                let windowID = info[kCGWindowNumber as String] as? CGWindowID,
+                let bounds = info[kCGWindowBounds as String] as? [String: CGFloat],
+                let frame = CGRect(dictionaryRepresentation: bounds as CFDictionary)
             else { return nil }
             // メニューバー全体を覆う板や、極端に細いものは項目ではない。
             guard frame.height < 60, frame.width > 4, frame.width < 200 else { return nil }
             // その画面の上端に貼り付いているものだけ。
             guard let host = screen(containing: frame),
-                  frame.minY - CGDisplayBounds(displayID(of: host)).minY < 5
+                frame.minY - CGDisplayBounds(displayID(of: host)).minY < 5
             else { return nil }
             let title = info[kCGWindowName as String] as? String ?? ""
             return StatusItem(windowID: windowID, key: title, frame: frame)
@@ -64,8 +65,8 @@ enum StatusItems {
     private static func titleScore(_ title: String) -> Int {
         if title.isEmpty { return 0 }
         if title.hasPrefix("Item-") { return 1 }  // どのアプリか分からない汎用名
-        if title.contains(".") { return 3 }       // バンドル ID とみなす
-        return 2                                  // Battery や UserSwitcher のような固有名
+        if title.contains(".") { return 3 }  // バンドル ID とみなす
+        return 2  // Battery や UserSwitcher のような固有名
     }
 
     /// 鍵まで解決した項目を返す。
@@ -107,12 +108,15 @@ enum StatusItems {
             // 同点のときは長いほうを採る。`Doll_com.hnc.Discord` のように
             // 何のための項目かまで入っている名前のほうが特定できる。
             // 最後に辞書順で並べ、実行ごとに結果が変わらないようにする。
-            guard let best = candidates.min(by: { left, right in
-                let leftScore = titleScore(left.key), rightScore = titleScore(right.key)
-                if leftScore != rightScore { return leftScore > rightScore }
-                if left.key.count != right.key.count { return left.key.count > right.key.count }
-                return left.key < right.key
-            }) else { continue }
+            guard
+                let best = candidates.min(by: { left, right in
+                    let leftScore = titleScore(left.key)
+                    let rightScore = titleScore(right.key)
+                    if leftScore != rightScore { return leftScore > rightScore }
+                    if left.key.count != right.key.count { return left.key.count > right.key.count }
+                    return left.key < right.key
+                })
+            else { continue }
             // 幅が食い違う位置は並びがずれている。名前は写さない。
             guard candidates.allSatisfy({ $0.frame.width == best.frame.width }) else { continue }
             bestTitle[index] = best.key
@@ -136,9 +140,10 @@ enum StatusItems {
                 counters[item.key] = number + 1
                 keyByWindow[item.windowID] = "\(item.key)#\(number)"
             }
-            keyed.append(titled.map {
-                StatusItem(windowID: $0.windowID, key: keyByWindow[$0.windowID] ?? "", frame: $0.frame)
-            })
+            keyed.append(
+                titled.map {
+                    StatusItem(windowID: $0.windowID, key: keyByWindow[$0.windowID] ?? "", frame: $0.frame)
+                })
         }
         return withAliases(keyed)
     }

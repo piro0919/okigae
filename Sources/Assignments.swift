@@ -74,7 +74,7 @@ enum Assignments {
     private static func migrateFacesFolder() {
         let old = supportDirectory.appendingPathComponent("Faces", isDirectory: true)
         guard FileManager.default.fileExists(atPath: old.path),
-              let names = try? FileManager.default.contentsOfDirectory(atPath: old.path)
+            let names = try? FileManager.default.contentsOfDirectory(atPath: old.path)
         else { return }
         for name in names {
             let destination = charactersDirectory.appendingPathComponent(name)
@@ -105,7 +105,7 @@ enum Assignments {
         installBundledCharacters()
         cache.removeAll()
         guard let data = try? Data(contentsOf: file),
-              let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+            let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String]
         else {
             table = [:]
             return
@@ -113,8 +113,8 @@ enum Assignments {
         // 古い名前で書かれた割り当ては、絵が改名済みなら行き先を失っている。
         let repaired = parsed.mapValues { value -> String in
             guard let new = renamed[value],
-                  FileManager.default.fileExists(
-                      atPath: charactersDirectory.appendingPathComponent("\(new).png").path)
+                FileManager.default.fileExists(
+                    atPath: charactersDirectory.appendingPathComponent("\(new).png").path)
             else { return value }
             return new
         }
@@ -124,8 +124,10 @@ enum Assignments {
 
     static func save() {
         prepareDirectories()
-        guard let data = try? JSONSerialization.data(withJSONObject: table,
-                                                     options: [.prettyPrinted, .sortedKeys])
+        guard
+            let data = try? JSONSerialization.data(
+                withJSONObject: table,
+                options: [.prettyPrinted, .sortedKeys])
         else { return }
         try? data.write(to: file)
     }
@@ -149,8 +151,10 @@ enum Assignments {
 
     /// 引き当ての中身。割り当て表を渡せるようにして、保存された表に触らずに
     /// 確かめられるようにしている。自分の鍵を先に見るので、別名より優先される。
-    static func character(for key: String, aliases: [String],
-                          in table: [String: String]) -> String? {
+    static func character(
+        for key: String, aliases: [String],
+        in table: [String: String]
+    ) -> String? {
         for candidate in [key] + aliases {
             if let name = table[candidate] { return name }
         }
@@ -179,7 +183,8 @@ enum Assignments {
     /// Characters に置かれているキャラクターの一覧。
     static func availableCharacters() -> [String] {
         let contents = (try? FileManager.default.contentsOfDirectory(atPath: charactersDirectory.path)) ?? []
-        return contents
+        return
+            contents
             .filter { $0.hasSuffix(".png") }
             .map { String($0.dropLast(4)) }
             .sorted()
