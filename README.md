@@ -119,3 +119,7 @@ losing the ability to update copies already out there.
 - An item's width caps the artwork, since item rects tile the bar with nothing between them.
   Raising the size setting grows the artwork sideways over its neighbours, up to the height
   of the bar.
+
+## License
+
+MIT
