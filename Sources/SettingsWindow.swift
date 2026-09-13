@@ -5,6 +5,7 @@ import AppKit
 /// 上段はメニューバーと同じ横一列。下段はキャラクターの一覧を格子で並べる。
 /// 項目を選んでからキャラクターを押す、という順で割り当てる。
 /// 縦積みの一覧に較べて、上段がそのまま仕上がりの下見になる。
+@MainActor
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let itemStrip = NSStackView()
     private let charactersGrid = NSStackView()

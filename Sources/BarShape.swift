@@ -9,6 +9,7 @@ import AppKit
 ///
 /// 余白は画面ごとに違う。内蔵ディスプレイのメニューバーは外付けより高く、
 /// 帯を描くアプリが詰める量もそれに応じて変わる。
+@MainActor
 enum BarShape {
     /// 画面ごとの余白。ポイント。
     private(set) static var insets: [CGDirectDisplayID: CGFloat] = [:]
