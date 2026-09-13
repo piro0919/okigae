@@ -2,6 +2,7 @@ import AppKit
 
 @main
 enum Okigae {
+    @MainActor
     static func main() {
         // 画面を出さずに引き当てだけ確かめる口。直したあとはこれを通す
         if CommandLine.arguments.contains("--selftest") {
@@ -15,6 +16,7 @@ enum Okigae {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// 項目ひとつにつき板ひとつ。
     ///
@@ -48,7 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         sync()
         timer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            self?.sync()
+            // Timer は主の実行ループから呼ぶ。飛ばずに入り、違ったら落とす
+            MainActor.assumeIsolated { self?.sync() }
         }
     }
 

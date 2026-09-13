@@ -31,6 +31,7 @@ cp -R Vendor/Sparkle.framework "$APP/Contents/Frameworks/"
 swiftc \
   -parse-as-library \
   -target "$TARGET" \
+  -swift-version 6 \
   -O \
   -F Vendor \
   -framework AppKit \

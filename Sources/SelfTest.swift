@@ -2,6 +2,7 @@ import Foundation
 
 /// 画面を出さずに、引き当てだけを確かめる。`./Okigae --selftest` で走る。
 /// 保存された割り当て表にも Characters の中身にも触らない。
+@MainActor
 enum SelfTest {
 
     private static var failures = 0

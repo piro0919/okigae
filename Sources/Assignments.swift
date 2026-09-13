@@ -5,6 +5,7 @@ import AppKit
 /// 鍵は `StatusItems.resolved()` が返すもので、`io.kkweb.konechi#0` のような形。
 /// ウィンドウ ID は再起動で変わるため使えず、バンドル ID だけでは同じアプリが
 /// 複数の項目を出す場合に区別できないので、通し番号を足している。
+@MainActor
 enum Assignments {
     /// 設定と絵の置き場。
     static let supportDirectory: URL = {

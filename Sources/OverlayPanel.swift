@@ -1,6 +1,7 @@
 import AppKit
 
 /// 絵を描くだけのビュー。枠に収まる最大の大きさで、縦横比を保つ。
+@MainActor
 final class FaceView: NSView {
     var image: NSImage
 
@@ -52,6 +53,7 @@ private final class PassThroughPanel: NSPanel {
 ///
 /// マウスはどちらも素通しさせる。本物はそのまま生きているので、クリックすれば
 /// 本来のメニューが開く。
+@MainActor
 final class OverlayPanel {
     private let backdropPanel: PassThroughPanel
     private let facePanel: PassThroughPanel
