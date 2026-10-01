@@ -8,8 +8,12 @@ reaching into another app's. So Okigae lays a panel over each item instead. The 
 item is still alive underneath: click it and its own menu opens, exactly as before.
 Only the apps you assign artwork to change; everything else stays as it was.
 
-Requires macOS 14 or later. Xcode is not needed — the Swift that ships with the
-Command Line Tools is enough.
+Requires macOS 14 or later on Apple silicon. The build targets `arm64` only, so Intel
+Macs cannot run it. Xcode is not needed — the Swift that ships with the Command Line Tools
+is enough.
+
+The interface is in English, or Japanese when Japanese is first in the system's preferred
+languages.
 
 ## Install
 
@@ -17,6 +21,13 @@ Grab the DMG from [Releases](https://github.com/piro0919/okigae/releases) and dr
 into Applications. The app is signed ad-hoc rather than notarised, so the first launch needs
 a right-click and **Open**. Updates after that arrive through Sparkle — Okigae looks once at
 launch and only says something when there is an update.
+
+**Each update asks for screen recording access again.** Releases are signed ad-hoc, and macOS
+ties the screen recording grant to the signature. An ad-hoc signature differs from build to
+build, so after Sparkle installs a new version macOS no longer recognises the grant and the
+overlays stop appearing. Remove Okigae from **System Settings → Privacy & Security → Screen &
+System Audio Recording**, add it back, and relaunch. This lasts until releases are signed with
+a stable identity such as a Developer ID.
 
 ## How it works
 
@@ -38,6 +49,10 @@ way to tell which item belongs to which app.
 
 Settings live in `~/Library/Application Support/Okigae/assignments.json`, artwork in
 `Characters/<name>.png` beside it. The menu bar item writes the same file when you pick from it.
+
+If that file cannot be read as JSON, Okigae starts with no assignments and moves the broken
+file aside to `assignments.json.corrupt-<timestamp>` first, so the next save does not
+overwrite it. Writes go through a temporary file and replace the old one in a single step.
 
 The key is the item's window title plus an ordinal.
 
