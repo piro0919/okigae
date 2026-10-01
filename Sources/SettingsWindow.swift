@@ -29,7 +29,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false)
-        window.title = "Okigae 設定"
+        window.title = L.settingsTitle
         window.center()
         // 全画面のアプリが手前にあると、常駐アプリの窓は元の Space に開いてしまう。
         // 呼ばれた場所に出す。
@@ -64,7 +64,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         charactersGrid.spacing = 4
         charactersGrid.alignment = .leading
 
-        let sizeLabel = NSTextField(labelWithString: "大きさ")
+        let sizeLabel = NSTextField(labelWithString: L.size)
         let size = NSPopUpButton()
         for value in [0.6, 0.8, 1.0, 1.2, 1.4] {
             size.addItem(withTitle: String(format: "%.0f%%", value * 100))
@@ -75,11 +75,11 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         size.target = self
         size.action = #selector(pickSize(_:))
 
-        let insetLabel = NSTextField(labelWithString: "上下の余白")
+        let insetLabel = NSTextField(labelWithString: L.verticalInset)
         // 空欄なら自動。数値を入れたらそれで上書きする。
         let manual = UserDefaults.standard.object(forKey: "verticalInset") as? Double
         let inset = NSTextField(string: manual.map { String(Int($0)) } ?? "")
-        inset.placeholderString = "自動"
+        inset.placeholderString = L.automatic
         inset.alignment = .right
         inset.target = self
         inset.action = #selector(setInset(_:))
@@ -87,16 +87,16 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         inset.widthAnchor.constraint(equalToConstant: 44).isActive = true
         insetField = inset
 
-        let openFolder = NSButton(title: "フォルダを開く", target: self, action: #selector(openCharactersFolder))
-        let refresh = NSButton(title: "更新", target: self, action: #selector(reload))
+        let openFolder = NSButton(title: L.openFolder, target: self, action: #selector(openCharactersFolder))
+        let refresh = NSButton(title: L.refresh, target: self, action: #selector(reload))
 
         let footer = NSStackView(views: [sizeLabel, size, insetLabel, inset, openFolder, refresh])
         footer.orientation = .horizontal
         footer.spacing = 8
 
         let root = NSStackView(views: [
-            sectionLabel("メニューバーの項目"), itemStrip, itemHint,
-            sectionLabel("キャラクター"), charactersGrid, characterHint, footer,
+            sectionLabel(L.menuBarItems), itemStrip, itemHint,
+            sectionLabel(L.characters), charactersGrid, characterHint, footer,
         ])
         root.orientation = .vertical
         root.alignment = .leading
@@ -214,7 +214,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         key.hasPrefix("Item-")
     }
 
-    static let namelessHint = "名前を名乗らない項目。どのアプリのものか判別できないので当てられません"
+    static var namelessHint: String { L.namelessHint }
 
     /// いま選んでいる項目。別の画面での鍵も要るので、鍵だけでなく項目ごと持つ。
     private var selectedItem: StatusItem? {
@@ -233,10 +233,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         let hasTarget = selectedKey != nil
         var cells: [NSView] = []
         let none = Cell(image: nil, side: cellSide, selected: hasTarget && current == nil, dimmed: false)
-        none.label = "なし"
-        none.toolTip = "なし"
+        none.label = L.none
+        none.toolTip = L.none
         none.onHover = { [weak self] inside in
-            self?.characterHint.stringValue = inside ? "なし" : self?.characterHintText() ?? ""
+            self?.characterHint.stringValue = inside ? L.none : self?.characterHintText() ?? ""
         }
         none.onClick = { [weak self] in self?.assign(nil) }
         cells.append(none)
@@ -264,18 +264,18 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     private func itemHintText() -> String {
         if items.isEmpty {
-            return "項目が見つかりません。画面収録の許可を確認してください。"
+            return L.noItemsFound
         }
         guard let key = selectedKey else {
-            return "キャラクターを当てる項目を選んでください"
+            return L.pickItem
         }
-        return "\(displayName(for: key)) に当てるキャラクターを選んでください"
+        return L.pickCharacter(for: displayName(for: key))
     }
 
     private func characterHintText() -> String {
         guard let item = selectedItem else { return " " }
         return Assignments.character(for: item.key, aliases: item.aliases)
-            .map { "いまは \(Assignments.displayName(for: $0))" } ?? "いまは なし"
+            .map { L.current(Assignments.displayName(for: $0)) } ?? L.current(L.none)
     }
 
     private func updateHint() {
@@ -297,24 +297,26 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     /// macOS 自身の項目。名前も記号も `NSWorkspace` からは引けないので、
     /// 読み替えと SF Symbols を持っておく。
-    private static let systemItems: [String: (name: String, symbol: String)] = [
-        "Clock": ("時計", "clock"),
-        "Battery": ("バッテリー", "battery.100"),
-        "Sound": ("音量", "speaker.wave.2"),
-        "BentoBox-0": ("コントロールセンター", "switch.2"),
-        "UserSwitcher": ("ユーザ", "person.crop.circle"),
-        "Display": ("ディスプレイ", "display"),
-        "Siri": ("Siri", "mic"),
-        "WiFi": ("Wi-Fi", "wifi"),
-        "AudioVideoModule": ("音声と映像", "video"),
-        "TimeMachine": ("Time Machine", "clock.arrow.circlepath"),
-        "KeyboardBrightness": ("キーボードの明るさ", "keyboard"),
-        "TextInput": ("入力ソース", "character.textbox"),
-        "ScreenMirroring": ("画面ミラーリング", "rectangle.on.rectangle"),
-        "NowPlaying": ("再生中", "play.circle"),
-        "FocusModes": ("集中モード", "moon"),
-        "Bluetooth": ("Bluetooth", "wave.3.right"),
-    ]
+    private static var systemItems: [String: (name: String, symbol: String)] {
+        [
+            "Clock": (L.clock, "clock"),
+            "Battery": (L.battery, "battery.100"),
+            "Sound": (L.sound, "speaker.wave.2"),
+            "BentoBox-0": (L.controlCenter, "switch.2"),
+            "UserSwitcher": (L.user, "person.crop.circle"),
+            "Display": (L.display, "display"),
+            "Siri": ("Siri", "mic"),
+            "WiFi": ("Wi-Fi", "wifi"),
+            "AudioVideoModule": (L.audioVideo, "video"),
+            "TimeMachine": ("Time Machine", "clock.arrow.circlepath"),
+            "KeyboardBrightness": (L.keyboardBrightness, "keyboard"),
+            "TextInput": (L.textInput, "character.textbox"),
+            "ScreenMirroring": (L.screenMirroring, "rectangle.on.rectangle"),
+            "NowPlaying": (L.nowPlaying, "play.circle"),
+            "FocusModes": (L.focus, "moon"),
+            "Bluetooth": ("Bluetooth", "wave.3.right"),
+        ]
+    }
 
     /// バンドル ID から実際のアプリ名を引く。`com.raycast.macos` を `macos` と
     /// 見せても伝わらない。
@@ -359,10 +361,10 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         // `Doll_com.hnc.Discord` のように、何のための項目かが入っている場合
         if base.contains("_"), let owner = base.components(separatedBy: "_").first {
             let target = base.components(separatedBy: "_").dropFirst().joined(separator: "_")
-            name = "\(owner)（\(target.components(separatedBy: ".").last ?? target)）"
+            name = L.owned(owner, target.components(separatedBy: ".").last ?? target)
         }
         let shown = name.count > 24 ? name.prefix(24) + "…" : name[...]
-        return number == 0 ? String(shown) : "\(shown) の \(number + 1) 個目"
+        return number == 0 ? String(shown) : L.nth(String(shown), number + 1)
     }
 
     /// 未割り当ての項目に何を出すか。

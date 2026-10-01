@@ -52,7 +52,7 @@ swiftc \
   -o "$APP/Contents/MacOS/Okigae" \
   Sources/StatusItems.swift Sources/Backdrop.swift Sources/BarShape.swift Sources/OverlayPanel.swift \
   Sources/Assignments.swift Sources/SelfTest.swift Sources/SettingsWindow.swift \
-  Sources/Updater.swift Sources/main.swift
+  Sources/Localization.swift Sources/Updater.swift Sources/main.swift
 
 # アプリ本体のアイコン。元絵があれば .icns を組み立てる
 if [ -f Resources/app-icon.png ]; then

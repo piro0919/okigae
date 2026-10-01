@@ -162,16 +162,16 @@ extension AppDelegate: NSMenuDelegate {
 
         // 文言は macOS と Sparkle の言い回しに合わせる。
         // 更新の画面は Sparkle が出すので、そちらの「アップデート」に揃える。
-        menu.addItem(withTitle: "設定…", action: #selector(openSettings), keyEquivalent: ",")
-        menu.addItem(withTitle: "アップデートを確認…", action: #selector(checkForUpdates), keyEquivalent: "")
+        menu.addItem(withTitle: L.settings, action: #selector(openSettings), keyEquivalent: ",")
+        menu.addItem(withTitle: L.checkForUpdates, action: #selector(checkForUpdates), keyEquivalent: "")
 
         if !CGPreflightScreenCaptureAccess() {
             menu.addItem(.separator())
-            menu.addItem(withTitle: "画面収録を許可…", action: #selector(openPrivacySettings), keyEquivalent: "")
+            menu.addItem(withTitle: L.allowScreenRecording, action: #selector(openPrivacySettings), keyEquivalent: "")
         }
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Okigae を終了", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(withTitle: L.quit, action: #selector(quit), keyEquivalent: "q")
 
         for entry in menu.items where entry.action != nil {
             entry.target = self

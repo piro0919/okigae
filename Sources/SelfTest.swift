@@ -47,11 +47,16 @@ enum SelfTest {
 
         // 升目に出す名前
         do {
-            check(Assignments.displayName(for: "momoka") == "ももか", "同梱の絵はかなで出す")
+            check(
+                Assignments.displayName(for: "momoka", japanese: true) == "ももか",
+                "同梱の絵は日本語ではかなで出す")
+            check(
+                Assignments.displayName(for: "momoka", japanese: false) == "momoka",
+                "英語ではファイル名のまま出す")
 
             // 利用者が自分で置いた絵は、ファイル名がそのまま名前になる
             check(
-                Assignments.displayName(for: "my-own-face") == "my-own-face",
+                Assignments.displayName(for: "my-own-face", japanese: true) == "my-own-face",
                 "読みの無い名前はそのまま出す")
         }
 

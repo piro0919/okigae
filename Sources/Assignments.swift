@@ -44,8 +44,10 @@ enum Assignments {
     ]
 
     /// 升目に出す名前。
-    static func displayName(for character: String) -> String {
-        readings[character] ?? character
+    /// かなの読みは日本語の画面でだけ使う。英語ではファイル名のまま出す。
+    static func displayName(for character: String, japanese: Bool? = nil) -> String {
+        guard japanese ?? (Language.resolved == .ja) else { return character }
+        return readings[character] ?? character
     }
 
     static func prepareDirectories() {
