@@ -130,8 +130,9 @@ a way to read it directly before asking a third time.
 - `screencapture -x -R<x,y,w,h> /tmp/bar.png` reads the menu bar back without asking anyone to
   describe it. Overlay alignment is a pixel question and should be settled from a picture.
 
-The sources emit no log lines at all, so there is nothing to read with `log show`. Add a
-`Logger` before reaching for one.
+Only `Assignments` logs, and only when `assignments.json` cannot be read or written:
+`log show --predicate 'subsystem == "io.kkweb.okigae"' --last 1h`. Everything else is silent,
+so add a `Logger` before reaching for `log show` anywhere else.
 
 ## Where things live
 
