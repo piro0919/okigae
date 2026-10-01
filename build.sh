@@ -8,6 +8,10 @@ APP="Okigae.app"
 TARGET="arm64-apple-macos14.0"
 VERSION="${OKIGAE_VERSION:-0.0.0}"
 SPARKLE_VERSION="2.9.5"
+# 取ってきた書庫を確かめる値。版を上げたら一緒に差し替える。
+# GitHub Releases の asset に載っている digest と同じもの:
+#   gh api repos/sparkle-project/Sparkle/releases/tags/<版> --jq '.assets[] | "\(.name) \(.digest)"'
+SPARKLE_SHA256="015336b601493e05c237964954bff6191370003d94edefe663724c88840d73cc"
 
 # 自動更新に Sparkle を使う。framework は大きいのでリポジトリに置かず、
 # 無ければ取ってくる（Vendor/ は git の管理外）
@@ -15,8 +19,16 @@ if [ ! -d "Vendor/Sparkle.framework" ]; then
   echo "Sparkle $SPARKLE_VERSION を取得します…"
   mkdir -p Vendor
   TMP="$(mktemp -d)"
-  curl -sL -o "$TMP/sparkle.tar.xz" \
+  curl -fsSL -o "$TMP/sparkle.tar.xz" \
     "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+  # 中身を検めずに同梱すると、差し替えられた framework がそのまま配布物に入る
+  if ! echo "${SPARKLE_SHA256}  $TMP/sparkle.tar.xz" | shasum -a 256 -c - >/dev/null; then
+    echo "エラー: Sparkle ${SPARKLE_VERSION} の SHA-256 が一致しません。" >&2
+    echo "        期待値: ${SPARKLE_SHA256}" >&2
+    echo "        実際:   $(shasum -a 256 "$TMP/sparkle.tar.xz" | cut -d' ' -f1)" >&2
+    rm -rf "$TMP"
+    exit 1
+  fi
   tar xf "$TMP/sparkle.tar.xz" -C "$TMP"
   cp -R "$TMP/Sparkle.framework" Vendor/
   cp -R "$TMP/bin" Vendor/
