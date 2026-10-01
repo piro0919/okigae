@@ -70,6 +70,51 @@ enum SelfTest {
                 "改名先が重なっていない")
         }
 
+        // 割り当て表の読み書き。一時フォルダで試し、本物の assignments.json には触らない
+        do {
+            let manager = FileManager.default
+            let directory = manager.temporaryDirectory
+                .appendingPathComponent("okigae-selftest-\(UUID().uuidString)", isDirectory: true)
+            try? manager.createDirectory(at: directory, withIntermediateDirectories: true)
+            defer { try? manager.removeItem(at: directory) }
+            let file = directory.appendingPathComponent("assignments.json")
+
+            check(Assignments.readTable(from: file).isEmpty, "ファイルが無ければ空の表")
+            check(
+                (try? manager.contentsOfDirectory(atPath: directory.path))?.isEmpty == true,
+                "ファイルが無いときは何も作らない")
+
+            let table = ["wifi#0": "momoka", "Clock#0": "ruri"]
+            check(Assignments.write(table, to: file), "書き出せる")
+            check(Assignments.readTable(from: file) == table, "書いた表をそのまま読める")
+
+            // 壊れたファイルは空として読むが、上書きされる前に退避されていなければならない
+            let broken = Data("{\"wifi#0\": \"momo".utf8)
+            try? broken.write(to: file)
+            let stamp = Date(timeIntervalSince1970: 1_800_000_000)
+            check(Assignments.readTable(from: file, now: stamp).isEmpty, "壊れた表は空として読む")
+            check(!manager.fileExists(atPath: file.path), "壊れたファイルは元の場所から退く")
+            let names = (try? manager.contentsOfDirectory(atPath: directory.path)) ?? []
+            let backups = names.filter { $0.hasPrefix("assignments.json.corrupt-") }
+            check(backups.count == 1, "壊れたファイルは .corrupt-<日時> に残る")
+            check(
+                backups.first.flatMap {
+                    try? Data(contentsOf: directory.appendingPathComponent($0))
+                } == broken,
+                "退避したファイルの中身は元のまま")
+
+            // 形は JSON でも、文字列から文字列への表でなければ同じく退避する
+            try? Data("[1, 2, 3]".utf8).write(to: file)
+            check(Assignments.readTable(from: file, now: stamp).isEmpty, "型の違う JSON も空として読む")
+            let after = ((try? manager.contentsOfDirectory(atPath: directory.path)) ?? [])
+                .filter { $0.hasPrefix("assignments.json.corrupt-") }
+            check(after.count == 2, "同じ時刻に壊れても前の退避を上書きしない")
+
+            // 書き出しに失敗しても落ちずに false を返す
+            let unwritable = directory.appendingPathComponent("missing/assignments.json")
+            check(!Assignments.write(table, to: unwritable), "書けない場所では false を返す")
+        }
+
         print(failures == 0 ? "全部通りました" : "\(failures) 件こけました")
         return failures == 0 ? 0 : 1
     }

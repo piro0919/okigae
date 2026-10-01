@@ -1,4 +1,7 @@
 import AppKit
+import os
+
+private let log = Logger(subsystem: "io.kkweb.okigae", category: "assignments")
 
 /// どの項目にどの絵を当てるか。
 ///
@@ -105,12 +108,7 @@ enum Assignments {
         prepareDirectories()
         installBundledCharacters()
         cache.removeAll()
-        guard let data = try? Data(contentsOf: file),
-            let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String]
-        else {
-            table = [:]
-            return
-        }
+        let parsed = readTable(from: file)
         // 古い名前で書かれた割り当ては、絵が改名済みなら行き先を失っている。
         let repaired = parsed.mapValues { value -> String in
             guard let new = renamed[value],
@@ -123,14 +121,68 @@ enum Assignments {
         if repaired != parsed { save() }
     }
 
+    /// 割り当て表を読む。無ければ空。
+    ///
+    /// 読めない・壊れているときも空で返すが、その前にファイルを
+    /// `assignments.json.corrupt-<日時>` へ退避する。空の表のまま次の `save()` が走ると、
+    /// 壊れていただけの設定が跡形もなく上書きされる。手で直せる余地を残す。
+    nonisolated static func readTable(from url: URL, now: Date = Date()) -> [String: String] {
+        let manager = FileManager.default
+        guard manager.fileExists(atPath: url.path) else { return [:] }
+        if let data = try? Data(contentsOf: url),
+            let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+        {
+            return parsed
+        }
+        let backup = corruptBackupURL(for: url, at: now)
+        do {
+            try manager.moveItem(at: url, to: backup)
+            log.error(
+                "assignments.json を読めないので退避しました: \(backup.path, privacy: .public)")
+        } catch {
+            log.error(
+                "assignments.json を読めず、退避にも失敗しました: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+        return [:]
+    }
+
+    /// 退避先。同じ秒に二度壊れることはまず無いが、あれば番号を足して上書きを避ける。
+    nonisolated static func corruptBackupURL(for url: URL, at date: Date) -> URL {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let stamp = formatter.string(from: date)
+        var candidate = url.deletingLastPathComponent()
+            .appendingPathComponent("\(url.lastPathComponent).corrupt-\(stamp)")
+        var number = 2
+        while FileManager.default.fileExists(atPath: candidate.path) {
+            candidate = url.deletingLastPathComponent()
+                .appendingPathComponent("\(url.lastPathComponent).corrupt-\(stamp)-\(number)")
+            number += 1
+        }
+        return candidate
+    }
+
     static func save() {
         prepareDirectories()
-        guard
-            let data = try? JSONSerialization.data(
+        write(table, to: file)
+    }
+
+    /// 書き出す。途中で落ちても半端なファイルを残さないよう、一時ファイル経由で置き換える。
+    @discardableResult
+    nonisolated static func write(_ table: [String: String], to url: URL) -> Bool {
+        do {
+            let data = try JSONSerialization.data(
                 withJSONObject: table,
                 options: [.prettyPrinted, .sortedKeys])
-        else { return }
-        try? data.write(to: file)
+            try data.write(to: url, options: .atomic)
+            return true
+        } catch {
+            log.error(
+                "assignments.json を書けませんでした: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
     }
 
     /// 割り当てる。別の画面で同じ項目が名乗る鍵にも同じ値を書く。
